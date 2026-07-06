@@ -1,0 +1,55 @@
+services:
+  db:
+    # TimescaleDB HA image: PostgreSQL + timescaledb + pgvector + pgvectorscale + postgis.
+    # One container, one database, multiple extensions — no separate DBs on the NAS.
+    image: timescale/timescaledb-ha:pg17
+    container_name: weather-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-weather}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-weather}
+      POSTGRES_DB: ${POSTGRES_DB:-weather}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/home/postgres/pgdata/data
+      # init scripts run once, on first initialization of an empty data dir
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-weather} -d ${POSTGRES_DB:-weather}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ingest:
+    build: ./ingest
+    container_name: weather-ingest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-weather}:${POSTGRES_PASSWORD:-weather}@db:5432/${POSTGRES_DB:-weather}
+    ports:
+      # point the GW3000 Custom Server at http://<NAS_IP>:8000/data/report
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: weather-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  grafana-data:

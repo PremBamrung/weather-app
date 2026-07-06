@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: TimescaleDB
+    type: postgres
+    access: proxy
+    url: db:5432
+    user: ${POSTGRES_USER:-weather}
+    secureJsonData:
+      password: ${POSTGRES_PASSWORD:-weather}
+    jsonData:
+      database: ${POSTGRES_DB:-weather}
+      sslmode: disable
+      postgresVersion: 1700
+      timescaledb: true
+    isDefault: true
