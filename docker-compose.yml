@@ -42,6 +42,10 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      # exposed to the datasource provisioning file (Grafana interpolates $VAR)
+      POSTGRES_USER: ${POSTGRES_USER:-weather}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-weather}
+      POSTGRES_DB: ${POSTGRES_DB:-weather}
     ports:
       - "3000:3000"
     volumes:

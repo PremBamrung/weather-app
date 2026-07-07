@@ -6,11 +6,13 @@ datasources:
     type: postgres
     access: proxy
     url: db:5432
-    user: ${POSTGRES_USER:-weather}
+    # Grafana interpolates $VAR from the container env (see docker-compose grafana env).
+    # NOTE: Grafana does NOT support ${VAR:-default} bash syntax — plain $VAR only.
+    user: $POSTGRES_USER
     secureJsonData:
-      password: ${POSTGRES_PASSWORD:-weather}
+      password: $POSTGRES_PASSWORD
     jsonData:
-      database: ${POSTGRES_DB:-weather}
+      database: $POSTGRES_DB
       sslmode: disable
       postgresVersion: 1700
       timescaledb: true
