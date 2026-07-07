@@ -46,6 +46,7 @@ async def health():
 
 
 @app.post("/data/report")
+@app.post("/data/report/")  # gateway may send a trailing slash
 async def ingest(request: Request):
     form = await request.form()
     data = {k: v for k, v in form.items()}

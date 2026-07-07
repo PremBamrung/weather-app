@@ -27,7 +27,7 @@ docker compose ps           # db should be (healthy)
 ```
 
 Services:
-- Ingestion API — `http://<NAS_IP>:8000`  (health: `GET /health`)
+- Ingestion API — `http://<NAS_IP>:8088`  (health: `GET /health`)
 - Grafana — `http://<NAS_IP>:3000`  (login from .env)
 - Postgres — `<NAS_IP>:5432`
 
@@ -36,7 +36,7 @@ Services:
 Send a synthetic Ecowitt payload:
 
 ```bash
-curl -X POST http://localhost:8000/data/report \
+curl -X POST http://localhost:8088/data/report \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "PASSKEY=TESTSTATION&stationtype=GW3000&tempf=72.5&humidity=45&baromrelin=29.92&windspeedmph=4.2&windgustmph=6.1&winddir=180&rainratein=0.00&solarradiation=350&uv=3&freq=915M"
 ```
@@ -58,7 +58,7 @@ In the gateway web UI → **Custom Server**:
 |----------|-------|
 | Protocol | Ecowitt |
 | Server   | `<NAS_IP>` |
-| Port     | `8000` |
+| Port     | `8088` |
 | Path     | `/data/report` |
 | Interval | `60` (seconds) |
 

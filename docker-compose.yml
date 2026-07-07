@@ -28,8 +28,9 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-weather}:${POSTGRES_PASSWORD:-weather}@db:5432/${POSTGRES_DB:-weather}
     ports:
-      # point the GW3000 Custom Server at http://<NAS_IP>:8000/data/report
-      - "8000:8000"
+      # host 8088 -> container 8000 (host :8000 is used by another container on this NAS).
+      # point the GW3000 Custom Server at http://<NAS_IP>:8088/data/report
+      - "8088:8000"
     depends_on:
       db:
         condition: service_healthy
