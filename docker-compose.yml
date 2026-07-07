@@ -21,6 +21,36 @@ services:
       timeout: 5s
       retries: 10
 
+  migrate:
+    # One-shot, idempotent migration runner. The db/init/*.sql scripts only execute on
+    # the FIRST initialization of an empty data dir, so schema changes never reach an
+    # already-initialized database (e.g. the NAS). This service applies the enrichment
+    # migration on every `up` and then exits; ingest/grafana wait for it to succeed.
+    # Reuses the db image (already present, no extra pull). Safe to re-run: ADD COLUMN
+    # is IF NOT EXISTS and the backfill only touches rows still missing values.
+    image: timescale/timescaledb-ha:pg17
+    container_name: weather-migrate
+    restart: "no"
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-weather}
+    entrypoint: ["psql"]
+    command:
+      - "-v"
+      - "ON_ERROR_STOP=1"
+      - "-h"
+      - "db"
+      - "-U"
+      - "${POSTGRES_USER:-weather}"
+      - "-d"
+      - "${POSTGRES_DB:-weather}"
+      - "-f"
+      - "/migrations/03-schema-enrichment.sql"
+    volumes:
+      - ./db/init:/migrations:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
   ingest:
     build: ./ingest
     container_name: weather-ingest
@@ -34,6 +64,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   grafana:
     image: grafana/grafana:latest
@@ -55,6 +87,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   db-data:
