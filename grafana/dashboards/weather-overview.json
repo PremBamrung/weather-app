@@ -1,0 +1,113 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "liveNow": false,
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["weather"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Weather Overview",
+  "uid": "weather-overview",
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Temperature",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": {
+        "defaults": { "unit": "celsius", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null }, { "color": "green", "value": 0 }, { "color": "orange", "value": 25 }, { "color": "red", "value": 32 } ] } },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto", "justifyMode": "auto" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", temp_c FROM weather_metrics WHERE $__timeFilter(time) AND temp_c IS NOT NULL ORDER BY time" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Humidity",
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": { "defaults": { "unit": "humidity", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "orange", "value": null }, { "color": "green", "value": 30 }, { "color": "blue", "value": 70 } ] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto", "justifyMode": "auto" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", humidity FROM weather_metrics WHERE $__timeFilter(time) AND humidity IS NOT NULL ORDER BY time" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Wind",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": { "defaults": { "unit": "velocityms", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 8 }, { "color": "red", "value": 15 } ] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto", "justifyMode": "auto" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", wind_ms FROM weather_metrics WHERE $__timeFilter(time) AND wind_ms IS NOT NULL ORDER BY time" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Temperature (°C)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 4 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": { "defaults": { "unit": "celsius", "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 15, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", temp_c AS \"Temperature\" FROM weather_metrics WHERE $__timeFilter(time) AND temp_c IS NOT NULL ORDER BY time" }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Wind speed & gust (m/s)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": { "defaults": { "unit": "velocityms", "custom": { "drawStyle": "line", "lineInterpolation": "linear", "fillOpacity": 10, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", wind_ms AS \"Wind\", gust_ms AS \"Gust\" FROM weather_metrics WHERE $__timeFilter(time) ORDER BY time" }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Pressure (hPa)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": { "defaults": { "unit": "pressurehpa", "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", pressure_hpa AS \"Pressure\" FROM weather_metrics WHERE $__timeFilter(time) AND pressure_hpa IS NOT NULL ORDER BY time" }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Humidity (%) & Rain rate (mm/hr)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": {
+        "defaults": { "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10, "showPoints": "never" } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Humidity" }, "properties": [ { "id": "unit", "value": "humidity" } ] },
+          { "matcher": { "id": "byName", "options": "Rain rate" }, "properties": [ { "id": "unit", "value": "lengthmm" }, { "id": "custom.drawStyle", "value": "bars" }, { "id": "custom.axisPlacement", "value": "right" } ] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", humidity AS \"Humidity\", rain_mm_hr AS \"Rain rate\" FROM weather_metrics WHERE $__timeFilter(time) ORDER BY time" }
+      ]
+    }
+  ]
+}

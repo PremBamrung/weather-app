@@ -2,6 +2,7 @@ apiVersion: 1
 
 datasources:
   - name: TimescaleDB
+    uid: timescaledb          # fixed uid so provisioned dashboards can reference it
     type: postgres
     access: proxy
     url: db:5432
