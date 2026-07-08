@@ -1,0 +1,21 @@
+# Notification routing. Provisioning a policy replaces the whole root policy and the root
+# receiver MUST reference an existing contact point — Grafana's built-in default receiver is
+# named inconsistently across versions ("empty" in 13.x, "grafana-default-email" earlier), so
+# we point the root at our own battery-notifier to stay self-contained. This stack's only
+# alerts are the battery rules; the nested group=battery route just gives them nicer grouping
+# and a 24h repeat (a low battery is a standing condition, not a per-cycle ping). If you add
+# non-battery alerts later, add sibling routes here.
+apiVersion: 1
+
+policies:
+  - orgId: 1
+    receiver: battery-notifier
+    group_by: [grafana_folder, alertname]
+    routes:
+      - receiver: battery-notifier
+        object_matchers:
+          - [group, =, battery]
+        group_by: [sensor]
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 24h

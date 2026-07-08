@@ -14,7 +14,7 @@
   "timezone": "browser",
   "title": "Weather Overview",
   "uid": "weather-overview",
-  "version": 2,
+  "version": 3,
   "panels": [
     {
       "id": 1,
@@ -254,6 +254,186 @@
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
       "targets": [
         { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", rain_weekly_mm AS \"Weekly\", rain_monthly_mm AS \"Monthly\", rain_yearly_mm AS \"Yearly\" FROM weather_metrics WHERE $__timeFilter(time) ORDER BY time" }
+      ]
+    },
+    {
+      "id": 18,
+      "type": "row",
+      "title": "Rooms & Soil — expansion sensors (WN31 / WH51)",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 44 },
+      "panels": []
+    },
+    {
+      "id": 19,
+      "type": "stat",
+      "title": "Room 1 temp",
+      "gridPos": { "h": 4, "w": 3, "x": 0, "y": 45 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": { "defaults": { "unit": "celsius", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null }, { "color": "green", "value": 18 }, { "color": "orange", "value": 25 }, { "color": "red", "value": 30 } ] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto", "justifyMode": "auto" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", temp_c FROM sensor_channels WHERE sensor_type='wn31' AND channel=1 AND temp_c IS NOT NULL AND $__timeFilter(time) ORDER BY time" }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "stat",
+      "title": "Room 1 RH",
+      "gridPos": { "h": 4, "w": 3, "x": 3, "y": 45 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": { "defaults": { "unit": "humidity", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "orange", "value": null }, { "color": "green", "value": 30 }, { "color": "blue", "value": 70 } ] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto", "justifyMode": "auto" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", humidity FROM sensor_channels WHERE sensor_type='wn31' AND channel=1 AND humidity IS NOT NULL AND $__timeFilter(time) ORDER BY time" }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "Room 2 temp",
+      "gridPos": { "h": 4, "w": 3, "x": 6, "y": 45 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": { "defaults": { "unit": "celsius", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null }, { "color": "green", "value": 18 }, { "color": "orange", "value": 25 }, { "color": "red", "value": 30 } ] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto", "justifyMode": "auto" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", temp_c FROM sensor_channels WHERE sensor_type='wn31' AND channel=2 AND temp_c IS NOT NULL AND $__timeFilter(time) ORDER BY time" }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "stat",
+      "title": "Room 2 RH",
+      "gridPos": { "h": 4, "w": 3, "x": 9, "y": 45 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": { "defaults": { "unit": "humidity", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "orange", "value": null }, { "color": "green", "value": 30 }, { "color": "blue", "value": 70 } ] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto", "justifyMode": "auto" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", humidity FROM sensor_channels WHERE sensor_type='wn31' AND channel=2 AND humidity IS NOT NULL AND $__timeFilter(time) ORDER BY time" }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "stat",
+      "title": "Soil moisture (CH1)",
+      "gridPos": { "h": 4, "w": 3, "x": 12, "y": 45 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "orange", "value": 20 }, { "color": "green", "value": 35 }, { "color": "blue", "value": 75 } ] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto", "justifyMode": "auto" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", soil_pct FROM sensor_channels WHERE sensor_type='wh51' AND channel=1 AND soil_pct IS NOT NULL AND $__timeFilter(time) ORDER BY time" }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "stat",
+      "title": "Soil battery (CH1)",
+      "gridPos": { "h": 4, "w": 3, "x": 15, "y": 45 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": { "defaults": { "unit": "volt", "decimals": 2, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "orange", "value": 1.2 }, { "color": "green", "value": 1.35 } ] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "auto", "justifyMode": "auto" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", batt FROM sensor_channels WHERE sensor_type='wh51' AND channel=1 AND batt IS NOT NULL AND $__timeFilter(time) ORDER BY time" }
+      ]
+    },
+    {
+      "id": 25,
+      "type": "stat",
+      "title": "Room 1 battery",
+      "gridPos": { "h": 4, "w": 3, "x": 18, "y": 45 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "OK", "color": "green", "index": 0 } } },
+            { "type": "value", "options": { "1": { "text": "LOW", "color": "red", "index": 1 } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "background", "graphMode": "none", "textMode": "auto", "justifyMode": "auto" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", batt FROM sensor_channels WHERE sensor_type='wn31' AND channel=1 AND batt IS NOT NULL AND $__timeFilter(time) ORDER BY time" }
+      ]
+    },
+    {
+      "id": 26,
+      "type": "stat",
+      "title": "Room 2 battery",
+      "gridPos": { "h": 4, "w": 3, "x": 21, "y": 45 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "OK", "color": "green", "index": 0 } } },
+            { "type": "value", "options": { "1": { "text": "LOW", "color": "red", "index": 1 } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "background", "graphMode": "none", "textMode": "auto", "justifyMode": "auto" },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", batt FROM sensor_channels WHERE sensor_type='wn31' AND channel=2 AND batt IS NOT NULL AND $__timeFilter(time) ORDER BY time" }
+      ]
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "Room temperature (°C)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 49 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": { "defaults": { "unit": "celsius", "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 12, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", max(temp_c) FILTER (WHERE channel=1) AS \"Room 1\", max(temp_c) FILTER (WHERE channel=2) AS \"Room 2\" FROM sensor_channels WHERE sensor_type='wn31' AND $__timeFilter(time) GROUP BY time ORDER BY time" }
+      ]
+    },
+    {
+      "id": 28,
+      "type": "timeseries",
+      "title": "Room humidity (%)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 49 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": { "defaults": { "unit": "humidity", "min": 0, "max": 100, "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", max(humidity) FILTER (WHERE channel=1) AS \"Room 1\", max(humidity) FILTER (WHERE channel=2) AS \"Room 2\" FROM sensor_channels WHERE sensor_type='wn31' AND $__timeFilter(time) GROUP BY time ORDER BY time" }
+      ]
+    },
+    {
+      "id": 29,
+      "type": "timeseries",
+      "title": "Soil moisture — calibrated % & raw AD (CH1)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 57 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": {
+        "defaults": { "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 12, "showPoints": "never" } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Moisture %" }, "properties": [ { "id": "unit", "value": "percent" }, { "id": "min", "value": 0 }, { "id": "max", "value": 100 }, { "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } } ] },
+          { "matcher": { "id": "byName", "options": "Raw AD" }, "properties": [ { "id": "unit", "value": "short" }, { "id": "custom.axisPlacement", "value": "right" }, { "id": "custom.fillOpacity", "value": 0 }, { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [8, 6] } }, { "id": "color", "value": { "mode": "fixed", "fixedColor": "brown" } } ] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", soil_pct AS \"Moisture %\", soil_ad AS \"Raw AD\" FROM sensor_channels WHERE sensor_type='wh51' AND channel=1 AND $__timeFilter(time) ORDER BY time" }
+      ]
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Soil sensor battery (V, CH1)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 57 },
+      "datasource": { "type": "postgres", "uid": "timescaledb" },
+      "fieldConfig": { "defaults": { "unit": "volt", "decimals": 2, "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 8, "showPoints": "never", "thresholdsStyle": { "mode": "line" } }, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "orange", "value": 1.2 }, { "color": "green", "value": 1.35 } ] } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", batt AS \"CH1 battery\" FROM sensor_channels WHERE sensor_type='wh51' AND channel=1 AND batt IS NOT NULL AND $__timeFilter(time) ORDER BY time" }
       ]
     }
   ]

@@ -1,0 +1,19 @@
+# Contact point for battery alerts. The destination is a generic webhook whose URL comes from
+# the BATTERY_ALERT_WEBHOOK env var (passed through in docker-compose.yml), so you can point it
+# at Discord/Slack/ntfy/Home Assistant/etc. without editing this file.
+#
+# NOTE: Grafana interpolates plain $VAR only — NOT ${VAR:-default} bash syntax. And an EMPTY
+# url fails provisioning hard (it crashes ALL provisioning, dashboards included). So the safe
+# default lives in docker-compose.yml (BATTERY_ALERT_WEBHOOK defaults to a placeholder host):
+# with no webhook set, rules still fire and show in the UI, delivery just no-ops on the bad host.
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: battery-notifier
+    receivers:
+      - uid: battery-webhook
+        type: webhook
+        settings:
+          url: $BATTERY_ALERT_WEBHOOK
+          httpMethod: POST

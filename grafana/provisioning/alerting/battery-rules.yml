@@ -1,0 +1,147 @@
+# Provisioned low-battery alert rules (Grafana unified alerting).
+#
+# Each rule runs a SQL query that returns a single number `metric` = how many sensors are
+# currently low (0 = all healthy), reduces it to the last value, and fires when it exceeds 0.
+# Batteries drain slowly, so a 15m evaluation with a 1h lookback is plenty and avoids flapping.
+#
+# Routing: rules carry `group: battery`, matched by the notification policy in
+# notification-policies.yml -> the `battery-notifier` contact point (contact-points.yml).
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: Battery
+    folder: Weather
+    interval: 15m
+    rules:
+      - uid: batt-ws69-low
+        title: WS69 outdoor array battery low
+        condition: C
+        for: 15m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          group: battery
+          severity: warning
+          sensor: ws69
+        annotations:
+          summary: "WS69 outdoor array battery is LOW (wh65batt=1). Replace the 2×AA backup cells."
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: timescaledb
+            model:
+              refId: A
+              datasource: { type: postgres, uid: timescaledb }
+              format: table
+              rawSql: >
+                SELECT wh65_batt AS metric FROM weather_metrics
+                WHERE wh65_batt IS NOT NULL AND time > now() - interval '1 hour'
+                ORDER BY time DESC LIMIT 1
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: batt-wn31-low
+        title: WN31 room sensor battery low
+        condition: C
+        for: 15m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          group: battery
+          severity: warning
+          sensor: wn31
+        annotations:
+          summary: "A WN31 room temp/humidity sensor reports LOW battery (batt<ch>=1). Replace its 2×AA cells."
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: timescaledb
+            model:
+              refId: A
+              datasource: { type: postgres, uid: timescaledb }
+              format: table
+              rawSql: >
+                SELECT count(*) AS metric FROM (
+                  SELECT DISTINCT ON (channel) channel, batt
+                  FROM sensor_channels
+                  WHERE sensor_type='wn31' AND batt IS NOT NULL AND time > now() - interval '1 hour'
+                  ORDER BY channel, time DESC
+                ) latest WHERE batt >= 1
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      - uid: batt-wh51-low
+        title: WH51 soil sensor battery low
+        condition: C
+        for: 15m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          group: battery
+          severity: warning
+          sensor: wh51
+        annotations:
+          summary: "A WH51 soil sensor battery dropped below 1.2 V (soilbatt<ch>). Replace its 1×AA cell."
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: timescaledb
+            model:
+              refId: A
+              datasource: { type: postgres, uid: timescaledb }
+              format: table
+              rawSql: >
+                SELECT count(*) AS metric FROM (
+                  SELECT DISTINCT ON (channel) channel, batt
+                  FROM sensor_channels
+                  WHERE sensor_type='wh51' AND batt IS NOT NULL AND time > now() - interval '1 hour'
+                  ORDER BY channel, time DESC
+                ) latest WHERE batt < 1.2
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [0] }
