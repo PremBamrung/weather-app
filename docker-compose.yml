@@ -24,10 +24,10 @@ services:
   migrate:
     # One-shot, idempotent migration runner. The db/init/*.sql scripts only execute on
     # the FIRST initialization of an empty data dir, so schema changes never reach an
-    # already-initialized database (e.g. the NAS). This service applies the enrichment
-    # migration on every `up` and then exits; ingest/grafana wait for it to succeed.
-    # Reuses the db image (already present, no extra pull). Safe to re-run: ADD COLUMN
-    # is IF NOT EXISTS and the backfill only touches rows still missing values.
+    # already-initialized database (e.g. the NAS). This service applies the pending
+    # migrations (03 enrichment, 04 sensor_channels) in order on every `up` and then exits;
+    # ingest/grafana wait for it to succeed. Reuses the db image (already present, no extra
+    # pull). Safe to re-run: DDL is IF NOT EXISTS and backfills only touch missing rows.
     image: timescale/timescaledb-ha:pg17
     container_name: weather-migrate
     restart: "no"
@@ -45,6 +45,8 @@ services:
       - "${POSTGRES_DB:-weather}"
       - "-f"
       - "/migrations/03-schema-enrichment.sql"
+      - "-f"
+      - "/migrations/04-sensor-channels.sql"
     volumes:
       - ./db/init:/migrations:ro
     depends_on:
@@ -78,6 +80,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-weather}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-weather}
       POSTGRES_DB: ${POSTGRES_DB:-weather}
+      # destination for provisioned low-battery alerts (see grafana/provisioning/alerting/).
+      # Set to a Discord/Slack/ntfy/Home-Assistant webhook URL. The default is a deliberately
+      # unroutable placeholder so alerts still fire/show in the UI without a real endpoint — an
+      # EMPTY value would crash Grafana's alerting provisioning, so keep it non-empty.
+      BATTERY_ALERT_WEBHOOK: ${BATTERY_ALERT_WEBHOOK:-https://example.invalid/battery-alert}
     ports:
       - "3000:3000"
     volumes:

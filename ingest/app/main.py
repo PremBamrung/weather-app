@@ -40,6 +40,20 @@ INSERT_SQL = """
     ON CONFLICT (station_id, time) DO NOTHING
 """
 
+# Multi-channel expansion sensors land in the narrow sensor_channels companion table
+# (see db/init/04-sensor-channels.sql and docs/hardware/expansion-sensors.md).
+CHANNEL_INSERT_SQL = """
+    INSERT INTO sensor_channels (
+        time, station_id, sensor_type, channel,
+        temp_c, humidity, soil_pct, soil_ad, batt
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+    ON CONFLICT (station_id, sensor_type, channel, time) DO NOTHING
+"""
+
+# Ecowitt caps WN31 at 8 channels and WH51 at 16 channels on a GW3000.
+WN31_MAX_CH = 8
+WH51_MAX_CH = 16
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -100,11 +114,49 @@ async def ingest(request: Request):
         json.dumps(data),
     )
 
+    channel_rows = _channel_rows(data, obs_time, station_id)
+
+    # One transaction: the main-array row and its per-channel rows commit together.
     async with app.state.pool.acquire() as conn:
-        await conn.execute(INSERT_SQL, *record)
+        async with conn.transaction():
+            await conn.execute(INSERT_SQL, *record)
+            if channel_rows:
+                await conn.executemany(CHANNEL_INSERT_SQL, channel_rows)
 
     # Ecowitt only needs a 200; body is ignored by the gateway.
     return PlainTextResponse("success")
+
+
+def _channel_rows(data, obs_time, station_id):
+    """Extract multi-channel expansion-sensor readings into sensor_channels rows.
+
+    Field naming follows the Ecowitt Custom Server protocol (see docs/pipeline/payload-format.md):
+      WN31 temp/humidity: temp<ch>f (°F), humidity<ch> (%), batt<ch> (0/1 low flag)
+      WH51 soil:          soilmoisture<ch> (%), soilad<ch> (raw AD), soilbatt<ch> (volts)
+    A channel is emitted only when its payload keys are present, so absent probes are skipped.
+    Column order matches CHANNEL_INSERT_SQL:
+      (time, station_id, sensor_type, channel, temp_c, humidity, soil_pct, soil_ad, batt)
+    """
+    rows = []
+    for ch in range(1, WN31_MAX_CH + 1):
+        tempf, humidity = data.get(f"temp{ch}f"), data.get(f"humidity{ch}")
+        if tempf is None and humidity is None:
+            continue
+        rows.append((
+            obs_time, station_id, "wn31", ch,
+            _conv(tempf, f_to_c), to_float(humidity),
+            None, None, to_float(data.get(f"batt{ch}")),
+        ))
+    for ch in range(1, WH51_MAX_CH + 1):
+        moisture, soil_ad = data.get(f"soilmoisture{ch}"), data.get(f"soilad{ch}")
+        if moisture is None and soil_ad is None:
+            continue
+        rows.append((
+            obs_time, station_id, "wh51", ch,
+            None, None,
+            to_float(moisture), to_int(soil_ad), to_float(data.get(f"soilbatt{ch}")),
+        ))
+    return rows
 
 
 def _conv(raw_value, fn):

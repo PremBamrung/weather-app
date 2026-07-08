@@ -73,6 +73,38 @@ SELECT add_compression_policy('weather_metrics', INTERVAL '7 days');
   transparently.
 - Continuous aggregates (e.g. hourly/daily rollups) are a natural fit for dashboards and for
   aligning ground truth to hourly [NWP downscaling](../ml/outdoor-downscaling.md) features.
-- Multi-channel expansion sensors can be added as columns or a narrow
-  `(station_id, channel, metric, value)` table depending on channel count — see
-  [expansion sensors](../hardware/expansion-sensors.md).
+- Multi-channel expansion sensors land in a narrow companion hypertable rather than widening
+  `weather_metrics` — see below and [expansion sensors](../hardware/expansion-sensors.md).
+
+## Multi-channel companion table (`sensor_channels`)
+
+The WN31 (up to 8 channels) and WH51 (up to 16 channels) each carry many independent probes in
+one gateway POST. Widening `weather_metrics` with dozens of sparse per-channel columns ages
+badly, so each `(sensor, channel)` reading is one narrow row in a companion hypertable
+(`db/init/04-sensor-channels.sql`):
+
+```sql
+CREATE TABLE sensor_channels (
+    time        TIMESTAMPTZ NOT NULL,
+    station_id  TEXT        NOT NULL,
+    sensor_type TEXT        NOT NULL,   -- 'wn31' | 'wh51'
+    channel     SMALLINT    NOT NULL,   -- 1..8 (WN31) or 1..16 (WH51)
+    temp_c      DOUBLE PRECISION,       -- WN31
+    humidity    DOUBLE PRECISION,       -- WN31
+    soil_pct    DOUBLE PRECISION,       -- WH51 calibrated %
+    soil_ad     INTEGER,                -- WH51 raw capacitance AD
+    batt        DOUBLE PRECISION,       -- WN31 0/1 flag; WH51 voltage
+    PRIMARY KEY (station_id, sensor_type, channel, time)
+);
+```
+
+- Same hypertable + 7-day compression policy as `weather_metrics`; `compress_segmentby`
+  is `station_id, sensor_type, channel` so each probe's series compresses independently.
+- The ingest service parses `temp<ch>f`/`humidity<ch>`/`batt<ch>` and
+  `soilmoisture<ch>`/`soilad<ch>`/`soilbatt<ch>` into these rows in the same transaction as the
+  main `weather_metrics` write.
+- Current fleet: **2× WN31** (room temp/humidity, channels 1–2) + **1× WH51** (soil, channel 1).
+  Adding more probes needs no schema change — new channels just appear as new rows.
+- The migration backfills soil history already captured in `weather_metrics.raw` from before the
+  table existed. Compressed chunks older than the policy window can't be updated in place; the
+  backfill only reaches uncompressed rows unless you decompress first.
