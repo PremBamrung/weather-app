@@ -64,10 +64,10 @@
       "title": "Wind",
       "gridPos": { "h": 4, "w": 3, "x": 9, "y": 0 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
-      "fieldConfig": { "defaults": { "unit": "velocityms", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 8 }, { "color": "red", "value": 15 } ] } }, "overrides": [] },
+      "fieldConfig": { "defaults": { "unit": "velocitykmh", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 29 }, { "color": "red", "value": 54 } ] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto", "justifyMode": "auto" },
       "targets": [
-        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", wind_ms FROM weather_metrics WHERE $__timeFilter(time) AND wind_ms IS NOT NULL ORDER BY time" }
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", wind_ms * 3.6 AS \"Wind\" FROM weather_metrics WHERE $__timeFilter(time) AND wind_ms IS NOT NULL ORDER BY time" }
       ]
     },
     {
@@ -76,10 +76,10 @@
       "title": "Max gust today",
       "gridPos": { "h": 4, "w": 3, "x": 12, "y": 0 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
-      "fieldConfig": { "defaults": { "unit": "velocityms", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 12 }, { "color": "red", "value": 20 } ] } }, "overrides": [] },
+      "fieldConfig": { "defaults": { "unit": "velocitykmh", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 43 }, { "color": "red", "value": 72 } ] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "auto", "justifyMode": "auto" },
       "targets": [
-        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", max_daily_gust_ms FROM weather_metrics WHERE $__timeFilter(time) AND max_daily_gust_ms IS NOT NULL ORDER BY time" }
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", max_daily_gust_ms * 3.6 AS \"Gust\" FROM weather_metrics WHERE $__timeFilter(time) AND max_daily_gust_ms IS NOT NULL ORDER BY time" }
       ]
     },
     {
@@ -168,18 +168,18 @@
     {
       "id": 12,
       "type": "timeseries",
-      "title": "Wind speed & gust (m/s)",
+      "title": "Wind speed & gust (km/h)",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": {
-        "defaults": { "unit": "velocityms", "custom": { "drawStyle": "line", "lineInterpolation": "linear", "fillOpacity": 10, "showPoints": "never" } },
+        "defaults": { "unit": "velocitykmh", "custom": { "drawStyle": "line", "lineInterpolation": "linear", "fillOpacity": 10, "showPoints": "never" } },
         "overrides": [
           { "matcher": { "id": "byName", "options": "Max daily gust" }, "properties": [ { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [8, 6] } }, { "id": "custom.fillOpacity", "value": 0 } ] }
         ]
       },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
       "targets": [
-        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", wind_ms AS \"Wind\", gust_ms AS \"Gust\", max_daily_gust_ms AS \"Max daily gust\" FROM weather_metrics WHERE $__timeFilter(time) ORDER BY time" }
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT time AS \"time\", wind_ms * 3.6 AS \"Wind\", gust_ms * 3.6 AS \"Gust\", max_daily_gust_ms * 3.6 AS \"Max daily gust\" FROM weather_metrics WHERE $__timeFilter(time) ORDER BY time" }
       ]
     },
     {
