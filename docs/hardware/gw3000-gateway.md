@@ -27,6 +27,9 @@ Bypass the Ecowitt cloud by pointing the gateway at the NAS. Configure via the *
 Web Interface** (recommended for a software engineer — no app/cloud account needed) or the
 Ecowitt mobile app.
 
+> **This network:** the GW3000's embedded web interface is at **http://192.168.0.14/**. Give
+> the gateway a DHCP reservation so that address stays put across reboots.
+
 Key settings:
 
 | Field                | Value                                   | Notes |
@@ -35,20 +38,23 @@ Key settings:
 | Server / IP          | NAS local IP (e.g. `192.168.1.145`)     | Use a **DHCP reservation** for the NAS *and* the gateway. |
 | Port                 | FastAPI container port                  | |
 | Path                 | e.g. `/data/report`                     | Whatever your FastAPI route is. |
-| Upload Interval      | **60 s** (this deployment)              | Minimum useful is 16 s (the WS69 RF cadence). This build uses 60 s — see the trade-off below. |
+| Upload Interval      | **16 s** (this deployment)              | Matches the WS69 RF cadence 1:1 — see the trade-off below. |
 
 > Assign a **static DHCP reservation** to the gateway in your router so a power blip or
 > router reboot doesn't change its IP and break your logging pipeline.
 
 ## Upload interval trade-off
 
-- **16 s** — real-time, zero-loss 1:1 mirror of the WS69 RF output. Only worth it for a
-  gust-specific model; otherwise it just stores rows the hourly ML target averages away.
-- **60 s** — the general default and **the interval chosen here**: ~1,440 rows/day, lighter
-  write load, resolves every real weather trend. Sole cost is sub-minute wind-gust detail
-  (the daily peak is still captured via `maxdailygust`). See [telemetry](../pipeline/telemetry.md).
+- **16 s** — real-time, zero-loss 1:1 mirror of the WS69 RF output, capturing every gust
+  frame with no aliasing. **The interval chosen here:** wind is volatile and the WS69 is a
+  16 s instrument, so this is the only rate that resolves it cleanly. ~5,400 rows/day, but
+  rows are small (trimmed `raw`) and the slow fields compress to almost nothing. See
+  [telemetry](../pipeline/telemetry.md).
+- **30–60 s** — lighter write load, fine if you don't care about sub-minute wind. 30 s drops
+  ~half the gust frames, 60 s ~three-quarters; the daily peak still survives via
+  `maxdailygust`. Intermediate rates (20/30 s) alias against the 16 s source for little gain.
 - **< 16 s** — pointless: the edge sensor only broadcasts every 16 s, so you'd just re-post
   duplicate values.
 
-At 60 s the WS69 generates ~1,440 rows/day — the driver behind the
+At 16 s the WS69 generates ~5,400 rows/day — the driver behind the
 [TimescaleDB storage design](../pipeline/database.md).

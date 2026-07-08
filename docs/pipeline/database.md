@@ -1,8 +1,9 @@
 # Database Architecture
 
-A 60 s gateway upload interval produces **~1,440 rows/day**. Even at this modest cadence a
-stock SQLite file or vanilla PostgreSQL instance suffers per-row metadata overhead and B-tree
-index degradation over months/years. The store is therefore **TimescaleDB**.
+A 16 s gateway upload interval (a 1:1 mirror of the WS69 RF cadence) produces **~5,400
+rows/day**. A stock SQLite file or vanilla PostgreSQL instance suffers per-row metadata
+overhead and B-tree index degradation at this cadence over months/years. The store is
+therefore **TimescaleDB**.
 
 ## Image
 
@@ -40,14 +41,15 @@ SELECT create_hypertable('weather_metrics', 'time',
 
 Older chunks are switched from row-oriented to **column-oriented** blocks:
 
-- **Delta-of-delta encoding** for timestamps (near-constant 60 s cadence compresses hard).
+- **Delta-of-delta encoding** for timestamps (near-constant 16 s cadence compresses hard).
 - **Gorilla compression** for floating-point sensor values.
 - Achieves ~**1.37 bits per value** on average.
 
-The numeric columns shrink dramatically (Gorilla reaches ~1–3 bytes/value). But the `raw`
-JSONB column compresses far less and dominates the total — realistic annual footprint is
-**~75–110 MB**, not the sub-50 MB the floats alone would suggest. See the [`raw` storage
-note](jsonb-storage.md).
+The numeric columns shrink dramatically (Gorilla reaches ~1–3 bytes/value). Now that `raw`
+holds only unpromoted keys (mostly near-constant metadata, which also compresses well), the
+numeric columns — not `raw` — dominate the compressed total. At 16 s the realistic annual
+footprint is order **~100 MB** (estimate; re-measure once a chunk compresses). See the
+[`raw` storage note](jsonb-storage.md).
 
 ```sql
 ALTER TABLE weather_metrics SET (
@@ -64,17 +66,19 @@ SELECT add_compression_policy('weather_metrics', INTERVAL '7 days');
 
 | Metric                       | Value |
 |------------------------------|-------|
-| Gateway upload interval      | 60 s (WS69 RF cadence is 16 s) |
-| Rows / day                   | ~1,440 |
-| Rows / year                  | ~526 k |
-| Uncompressed / year          | ~500–650 MB (incl. `raw` JSONB) |
-| Compressed / year (est.)     | ~75–110 MB — dominated by `raw`, see note |
-| Avg bits / value (numeric)   | ~1.37 (floats only; `raw` compresses far worse) |
+| Gateway upload interval      | 16 s (1:1 with the WS69 RF cadence) |
+| Rows / day                   | ~5,400 |
+| Rows / year                  | ~1.97 M |
+| Uncompressed / year          | ~700 MB (rows are small since `raw` is trimmed) |
+| Compressed / year (est.)     | ~100 MB — now numeric-dominated, see note |
+| Avg bits / value (numeric)   | ~1.37 |
 
-> Measured 2026-07-08 on the live NAS DB: the `raw` JSONB column is **~76 % of each
-> uncompressed row**. Compression had not yet triggered (data < 7 days old → 0 compressed
-> chunks), so the compressed figures remain estimates — re-check with
-> `hypertable_compression_stats('weather_metrics')` after the first chunk ages past 7 days.
+> The `raw` JSONB was measured at **~76 % of each uncompressed row on 2026-07-08**, which is
+> why it was trimmed to unpromoted keys only (see [note](jsonb-storage.md)) — numeric columns
+> now dominate. The cadence was also raised from 60 s to **16 s** for full wind/gust fidelity.
+> Both changes postdate the first data and no chunk had compressed yet (< 7 days old), so the
+> compressed figures are estimates — re-check with
+> `hypertable_compression_stats('weather_metrics')` once the first chunk ages past 7 days.
 
 ## Notes
 

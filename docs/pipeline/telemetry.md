@@ -34,23 +34,22 @@ fraction of a second over 915 MHz, and sleeps again. There is **no confirmation 
 The GW3000 acts as an edge cache: it holds the latest state vector for every sensor and
 POSTs it to the NAS on the **Custom Server Upload Interval**.
 
-- **This deployment:** upload interval set to **60 s** over wired Ethernet. The WS69 still
-  broadcasts every 16 s over RF, so each POST carries only the *latest* cached frame and the
-  ~3 intervening frames are dropped — a deliberate ~4:1 decimation.
-- **Why 60 s, not 16 s:** the ML targets downscale to *hourly* HRDPS/METAR, so sub-minute
-  outdoor data is averaged straight back to the hour — 16 s would just store rows the target
-  throws away. 60 s keeps ~1,440 rows/day and still resolves every real weather trend.
-- **What 60 s costs:** only sub-minute **wind-gust** resolution. `windgustmph` reflects the
-  latest RF frame, and the gateway does *not* roll up a max across the upload interval, so
-  intra-minute gust peaks between POSTs are not captured in `gust_ms`. The **daily peak gust
-  is still lossless** via `maxdailygust` → `max_daily_gust_ms`, which the gateway accumulates
-  continuously. Cumulative rain counters are likewise unaffected. Revisit 60 s only if you
-  add a gust-specific model.
+- **This deployment:** upload interval set to **16 s** over wired Ethernet — a 1:1 mirror of
+  the WS69's RF cadence, so every broadcast frame is captured with no aliasing.
+- **Why 16 s:** wind is volatile and the WS69 *is* a 16 s instrument, so this is the only rate
+  that captures every gust frame cleanly. Anything slower drops frames (30 s loses ~half the
+  gusts, 60 s ~three-quarters), and intermediate rates like 20/30 s alias against the 16 s
+  source for little row-count saving. Storage is cheap enough to make 16 s the default here:
+  rows are small now that `raw` holds only unpromoted keys — see [database](database.md).
+- **What 16 s costs:** the slow fields (temp, pressure, humidity) are oversampled ~4× versus
+  60 s, but they Gorilla-compress to almost nothing. `maxdailygust` → `max_daily_gust_ms`
+  records the absolute daily peak regardless of interval, and cumulative rain counters are
+  unaffected — so nothing is lost by going fast.
 
 Wired Ethernet (RJ45) is used instead of Wi-Fi to eliminate handshake latency and jitter.
 
 ## Volume implication
 
-At a 60 s interval the WS69 produces **~1,440 rows/day** (~526 k rows/year). Even this modest
-rate is why storage uses TimescaleDB hypertables and columnar compression rather than stock
+At a 16 s interval the WS69 produces **~5,400 rows/day** (~1.97 M rows/year). That row rate is
+exactly why storage uses TimescaleDB hypertables and columnar compression rather than stock
 PostgreSQL or SQLite — see [database architecture](database.md).

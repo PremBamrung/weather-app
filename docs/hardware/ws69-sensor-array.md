@@ -33,8 +33,8 @@ confirmation loop** — the sensor screams its telemetry into the air and goes b
 > 61 s; a WH51 soil probe every 70 s. Broadcast cadence is per-sensor and hardcoded.
 
 Because the RF interval is 16 s, setting the gateway's upload interval below 16 s is
-redundant — it would just re-post identical edge data. This build actually uploads at **60 s**
-(above the RF rate), decimating ~4:1; the only casualty is sub-minute gust detail. See
+redundant — it would just re-post identical edge data. This build uploads at **16 s** to match
+the RF cadence 1:1, capturing every gust frame with no aliasing. See
 [telemetry](../pipeline/telemetry.md) and the
 [gateway upload trade-off](gw3000-gateway.md#upload-interval-trade-off).
 
