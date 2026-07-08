@@ -27,9 +27,35 @@ Confirmed specs: Wi-Fi (2.4 GHz, 802.11 b/g/n) **and** LAN/Ethernet; **built-in 
 humidity and barometric sensors** (this is why pressure is gateway-side); SD card port;
 915 MHz (North America).
 
-### Expansion sensors
-- WN31 / WH31 multi-channel temp/humidity: https://shop.ecowitt.com/products/wh31
-- WH51 soil moisture probe: https://shop.ecowitt.com/products/wh51
+### WN31 (WH31) multi-channel temp/humidity sensor
+- Product page: https://shop.ecowitt.com/products/wn31
+- Support/download hub: https://www.ecowitt.com/support/download/55
+- **Operation manual (PDF):** https://osswww.ecowitt.net/uploads/20230227/WH31%20Manual.pdf
+  — local copy: [`hardware/datasheets/WN31-temp-humidity-manual.pdf`](hardware/datasheets/WN31-temp-humidity-manual.pdf)
+- Manual mirror (ManualsLib): https://www.manualslib.com/manual/2917703/Ecowitt-Wn31.html
+
+Confirmed specs (from the manual): measures temperature + humidity, **up to 8 channels**
+(channel set by DIP switches 1–3 inside the battery door, *not* by power-on order); temp range
+−40 °C to 60 °C, resolution 0.1 °C, accuracy ±1 °C (±0.2 °C on the STH35-probe variant); humidity
+10–99 %, resolution 1 %, accuracy ±5 % (±1.8 % probe); **reports ~every 60 s**; 2×AA; 915 MHz
+(NA). Note: WN31 (multi-channel) data uploads to ecowitt.net but is **not** accepted by Weather
+Underground (only the single-channel WN32 is).
+
+### WH51 soil moisture sensor
+- Product page: https://shop.ecowitt.com/products/wh51
+- Support/download hub: https://www.ecowitt.com/support/download/19
+- **Operation manual (PDF):** https://oss.ecowitt.net/uploads/20251226/WH51Manual.pdf
+  — local copy: [`hardware/datasheets/WH51-soil-moisture-manual.pdf`](hardware/datasheets/WH51-soil-moisture-manual.pdf)
+- Manual mirror (ManualsLib): https://www.manualslib.com/manual/1597353/Ecowitt-Wh51.html
+
+Confirmed specs (from the manual): capacitive / Frequency-Domain-Reflectometry soil moisture,
+range 0–100 %, resolution 1 %, accuracy ±5 %; working temp −10 °C to 50 °C; **up to 16 channels**
+on a GW3000 (fw ≥ V1.0.2), recognized by power-on order; reports **every 70 s** (drops to every
+10 s on a significant change); 100 m open-field range (200 m with the optional high-gain antenna);
+IP66; 1×AA lasting **≥ 12 months**. Raw capacitance is exposed as `soilad<ch>` and mapped to a
+percentage via the gateway's `0%AD`/`100%AD` calibration (factory default 70 → 500 AD).
+
+### Other ecosystem options
 - WS90 "Wittboy" solid-state array (alternative): https://shop.ecowitt.com/products/ws90
 
 ## Weather data feeds

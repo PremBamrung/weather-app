@@ -26,8 +26,8 @@ fraction of a second over 915 MHz, and sleeps again. There is **no confirmation 
 |--------|-----------------------|
 | WS90 (ultrasonic/solid-state) | every 4.75–8.8 s |
 | **WS69 (mechanical 7-in-1)**  | **every 16 s** |
-| WN31 (indoor temp/humidity)   | every 61 s |
-| WH51 (soil moisture)          | every 70 s |
+| WN31 (indoor temp/humidity)   | every ~60 s |
+| WH51 (soil moisture)          | every 70 s (drops to 10 s on a significant change) |
 
 ## Tier 2 — Ingestion layer (gateway → NAS, HTTP)
 

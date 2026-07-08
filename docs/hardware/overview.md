@@ -41,8 +41,8 @@ The WS69 talks to the GW3000 over the unlicensed **915 MHz sub-GHz band**, not 2
 |--------|------|------|-------|
 | WS69   | Outdoor 7-in-1 measurement | 915 MHz RF broadcast (out) | Solar + supercap + 2×AA backup |
 | GW3000 | Edge cache + uplink | 915 MHz RF (in), Ethernet HTTP POST (out) | Mains (USB) |
-| WN31   | Indoor room temp/humidity (future) | 915 MHz RF broadcast (out) | 2×AA |
-| WH51   | Soil moisture probe (future) | 915 MHz RF broadcast (out) | 1×AA |
+| WN31   | Indoor room temp/humidity (up to 8 ch, arriving) | 915 MHz RF broadcast (out) | 2×AA |
+| WH51   | Soil moisture probe (up to 16 ch, installed) | 915 MHz RF broadcast (out) | 1×AA |
 
 See:
 - [WS69 sensor array](ws69-sensor-array.md)

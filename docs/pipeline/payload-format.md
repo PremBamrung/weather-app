@@ -14,7 +14,8 @@ PASSKEY=0123456789ABCDEF&stationtype=GW3000&runtime=3420&tempf=72.5&humidity=45&
 ```
 
 With expansion sensors attached, additional pairs appear in the same body, e.g.
-`wh31batt1=1`, `temp1f=68.2`, `humidity1=48`, `wh51batt1=1.42`.
+`temp1f=68.2`, `humidity1=48`, `batt1=0` (WN31 ch1) and
+`soilmoisture1=48`, `soilad1=276`, `soilbatt1=1.42` (WH51 ch1).
 
 ## Field reference
 
@@ -37,8 +38,10 @@ With expansion sensors attached, additional pairs appear in the same body, e.g.
 | `uv`           | UV index                         | index       | — |
 | `temp<ch>f`    | WN31 channel temperature         | °F          | °C |
 | `humidity<ch>` | WN31 channel humidity            | %           | — |
-| `wh31batt<ch>` | WN31 battery flag                | 0/1         | boolean (0 = normal, 1 = low) |
-| `wh51batt<ch>` | WH51 battery voltage             | V           | float |
+| `batt<ch>`     | WN31 battery flag                | 0/1         | boolean (0 = normal, 1 = low) |
+| `soilmoisture<ch>` | WH51 soil moisture           | %           | keep (already calibrated) |
+| `soilad<ch>`   | WH51 raw capacitance AD value    | 0–1000+     | keep (re-derive % if recalibrated) |
+| `soilbatt<ch>` | WH51 battery voltage             | V           | float |
 
 > Values arrive in **Imperial units**. The FastAPI layer performs the explicit physical
 > conversions to metric **before** writing to the database. This is the single most common
