@@ -1,16 +1,17 @@
 # Database Architecture
 
-High-frequency sampling (16 s) produces **~5,400 rows/day**. A stock SQLite file or vanilla
-PostgreSQL instance suffers heavy per-row metadata overhead and B-tree index degradation at
-this cadence over months/years. The store is therefore **TimescaleDB**.
+A 60 s gateway upload interval produces **~1,440 rows/day**. Even at this modest cadence a
+stock SQLite file or vanilla PostgreSQL instance suffers per-row metadata overhead and B-tree
+index degradation over months/years. The store is therefore **TimescaleDB**.
 
 ## Image
 
 ```
-timescale/timescaledb:latest-pg16
+timescale/timescaledb-ha:pg17
 ```
 
-This turns PostgreSQL into a time-series database via **hypertables** while keeping full SQL.
+The HA image bundles pgvector / pgvectorscale / postgis alongside TimescaleDB, turning
+PostgreSQL into a time-series database via **hypertables** while keeping full SQL.
 
 ## Hypertable partitioning
 
@@ -39,11 +40,14 @@ SELECT create_hypertable('weather_metrics', 'time',
 
 Older chunks are switched from row-oriented to **column-oriented** blocks:
 
-- **Delta-of-delta encoding** for timestamps (near-constant 16 s cadence compresses hard).
+- **Delta-of-delta encoding** for timestamps (near-constant 60 s cadence compresses hard).
 - **Gorilla compression** for floating-point sensor values.
 - Achieves ~**1.37 bits per value** on average.
 
-Net effect: an annual footprint of ~1 GB uncompressed shrinks to **< 50 MB**.
+The numeric columns shrink dramatically (Gorilla reaches ~1–3 bytes/value). But the `raw`
+JSONB column compresses far less and dominates the total — realistic annual footprint is
+**~75–110 MB**, not the sub-50 MB the floats alone would suggest. See the [`raw` storage
+note](jsonb-storage.md).
 
 ```sql
 ALTER TABLE weather_metrics SET (
@@ -60,12 +64,17 @@ SELECT add_compression_policy('weather_metrics', INTERVAL '7 days');
 
 | Metric                       | Value |
 |------------------------------|-------|
-| Sample interval              | 16 s |
-| Rows / day                   | ~5,400 |
-| Rows / year                  | ~1.97 M |
-| Uncompressed / year          | ~1 GB |
-| Compressed / year            | < 50 MB |
-| Avg bits / value             | ~1.37 |
+| Gateway upload interval      | 60 s (WS69 RF cadence is 16 s) |
+| Rows / day                   | ~1,440 |
+| Rows / year                  | ~526 k |
+| Uncompressed / year          | ~500–650 MB (incl. `raw` JSONB) |
+| Compressed / year (est.)     | ~75–110 MB — dominated by `raw`, see note |
+| Avg bits / value (numeric)   | ~1.37 (floats only; `raw` compresses far worse) |
+
+> Measured 2026-07-08 on the live NAS DB: the `raw` JSONB column is **~76 % of each
+> uncompressed row**. Compression had not yet triggered (data < 7 days old → 0 compressed
+> chunks), so the compressed figures remain estimates — re-check with
+> `hypertable_compression_stats('weather_metrics')` after the first chunk ages past 7 days.
 
 ## Notes
 
@@ -103,8 +112,9 @@ CREATE TABLE sensor_channels (
 - The ingest service parses `temp<ch>f`/`humidity<ch>`/`batt<ch>` and
   `soilmoisture<ch>`/`soilad<ch>`/`soilbatt<ch>` into these rows in the same transaction as the
   main `weather_metrics` write.
-- Current fleet: **2× WN31** (room temp/humidity, channels 1–2) + **1× WH51** (soil, channel 1).
-  Adding more probes needs no schema change — new channels just appear as new rows.
+- Current fleet (live as of 2026-07-08): **1× WH51** (soil, channel 1) reporting; the **WN31**
+  room sensors are on the way and not yet present in `sensor_channels`. Adding more probes needs
+  no schema change — new channels just appear as new rows.
 - The migration backfills soil history already captured in `weather_metrics.raw` from before the
   table existed. Compressed chunks older than the policy window can't be updated in place; the
   backfill only reaches uncompressed rows unless you decompress first.

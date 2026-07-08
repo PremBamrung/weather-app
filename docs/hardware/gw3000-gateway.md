@@ -35,17 +35,20 @@ Key settings:
 | Server / IP          | NAS local IP (e.g. `192.168.1.145`)     | Use a **DHCP reservation** for the NAS *and* the gateway. |
 | Port                 | FastAPI container port                  | |
 | Path                 | e.g. `/data/report`                     | Whatever your FastAPI route is. |
-| Upload Interval      | **16 s** (this deployment)              | Minimum useful is 16 s; general recommendation is 30–60 s. 16 s gives a 1:1 mirror of the WS69's edge cadence. |
+| Upload Interval      | **60 s** (this deployment)              | Minimum useful is 16 s (the WS69 RF cadence). This build uses 60 s — see the trade-off below. |
 
 > Assign a **static DHCP reservation** to the gateway in your router so a power blip or
 > router reboot doesn't change its IP and break your logging pipeline.
 
 ## Upload interval trade-off
 
-- **16 s** — real-time, zero-loss 1:1 mirror of the WS69 RF output (chosen here).
-- **30–60 s** — recommended general default; lighter write load, still fine for weather.
+- **16 s** — real-time, zero-loss 1:1 mirror of the WS69 RF output. Only worth it for a
+  gust-specific model; otherwise it just stores rows the hourly ML target averages away.
+- **60 s** — the general default and **the interval chosen here**: ~1,440 rows/day, lighter
+  write load, resolves every real weather trend. Sole cost is sub-minute wind-gust detail
+  (the daily peak is still captured via `maxdailygust`). See [telemetry](../pipeline/telemetry.md).
 - **< 16 s** — pointless: the edge sensor only broadcasts every 16 s, so you'd just re-post
   duplicate values.
 
-At 16 s the WS69 generates ~5,400 rows/day — the driver behind the
+At 60 s the WS69 generates ~1,440 rows/day — the driver behind the
 [TimescaleDB storage design](../pipeline/database.md).

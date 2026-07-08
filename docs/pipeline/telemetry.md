@@ -34,15 +34,23 @@ fraction of a second over 915 MHz, and sleeps again. There is **no confirmation 
 The GW3000 acts as an edge cache: it holds the latest state vector for every sensor and
 POSTs it to the NAS on the **Custom Server Upload Interval**.
 
-- **This deployment:** upload interval set to **16 s** over wired Ethernet → a real-time,
-  zero-loss 1:1 mirror of the WS69's edge cadence.
-- **Minimum useful:** 16 s. Lower is redundant — the edge sensor only broadcasts every 16 s.
-- **General recommendation:** 30–60 s if you want a lighter write load.
+- **This deployment:** upload interval set to **60 s** over wired Ethernet. The WS69 still
+  broadcasts every 16 s over RF, so each POST carries only the *latest* cached frame and the
+  ~3 intervening frames are dropped — a deliberate ~4:1 decimation.
+- **Why 60 s, not 16 s:** the ML targets downscale to *hourly* HRDPS/METAR, so sub-minute
+  outdoor data is averaged straight back to the hour — 16 s would just store rows the target
+  throws away. 60 s keeps ~1,440 rows/day and still resolves every real weather trend.
+- **What 60 s costs:** only sub-minute **wind-gust** resolution. `windgustmph` reflects the
+  latest RF frame, and the gateway does *not* roll up a max across the upload interval, so
+  intra-minute gust peaks between POSTs are not captured in `gust_ms`. The **daily peak gust
+  is still lossless** via `maxdailygust` → `max_daily_gust_ms`, which the gateway accumulates
+  continuously. Cumulative rain counters are likewise unaffected. Revisit 60 s only if you
+  add a gust-specific model.
 
 Wired Ethernet (RJ45) is used instead of Wi-Fi to eliminate handshake latency and jitter.
 
 ## Volume implication
 
-At a 16 s interval the WS69 produces **~5,400 rows/day** (~1.97 M rows/year). That row rate
-is exactly why storage uses TimescaleDB hypertables and columnar compression rather than
-stock PostgreSQL or SQLite — see [database architecture](database.md).
+At a 60 s interval the WS69 produces **~1,440 rows/day** (~526 k rows/year). Even this modest
+rate is why storage uses TimescaleDB hypertables and columnar compression rather than stock
+PostgreSQL or SQLite — see [database architecture](database.md).
