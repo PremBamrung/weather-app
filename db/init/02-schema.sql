@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS weather_metrics (
     rain_yearly_mm    DOUBLE PRECISION,        -- from yearlyrainin
     vpd_kpa           DOUBLE PRECISION,        -- from vpd (vapor-pressure deficit, gateway-computed)
     wh65_batt         SMALLINT,                -- from wh65batt: WS69 array battery flag (0 = OK)
+    rain_total_mm     DOUBLE PRECISION,        -- from totalrainin (all-time rain accumulator)
+    rain_last24h_mm   DOUBLE PRECISION,        -- from last24hrainin (rolling 24 h rainfall)
     raw               JSONB,                   -- unpromoted keys only (unknown/new-sensor fields + metadata); promoted fields live in typed columns — see docs/pipeline/jsonb-storage.md
     PRIMARY KEY (station_id, time)             -- includes `time` (hypertable requirement)
 );

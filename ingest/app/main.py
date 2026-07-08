@@ -37,9 +37,10 @@ INSERT_SQL = """
         wind_ms, gust_ms, wind_dir, rain_mm_hr, solar_wm2, uv,
         temp_in_c, humidity_in, pressure_abs_hpa, wind_dir_avg10m, max_daily_gust_ms,
         rain_event_mm, rain_hourly_mm, rain_daily_mm, rain_weekly_mm,
-        rain_monthly_mm, rain_yearly_mm, vpd_kpa, wh65_batt, raw
+        rain_monthly_mm, rain_yearly_mm, vpd_kpa, wh65_batt,
+        rain_total_mm, rain_last24h_mm, raw
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,
-              $17,$18,$19,$20,$21,$22,$23,$24,$25)
+              $17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
     ON CONFLICT (station_id, time) DO NOTHING
 """
 
@@ -76,7 +77,8 @@ _PROMOTED_KEYS = frozenset({
     "winddir", "rainratein", "solarradiation", "uv",
     "tempinf", "humidityin", "baromabsin", "winddir_avg10m", "maxdailygust",
     "eventrainin", "hourlyrainin", "dailyrainin", "weeklyrainin",
-    "monthlyrainin", "yearlyrainin", "vpd", "wh65batt",
+    "monthlyrainin", "yearlyrainin", "totalrainin", "last24hrainin",
+    "vpd", "wh65batt",
 }) | _CHANNEL_KEYS
 
 
@@ -136,6 +138,8 @@ async def ingest(request: Request):
         _conv(data.get("yearlyrainin"), in_to_mm),
         to_float(data.get("vpd")),
         to_int(data.get("wh65batt")),
+        _conv(data.get("totalrainin"), in_to_mm),
+        _conv(data.get("last24hrainin"), in_to_mm),
         json.dumps(_unpromoted(data)),
     )
 
