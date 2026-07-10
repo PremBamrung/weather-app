@@ -25,9 +25,10 @@ services:
     # One-shot, idempotent migration runner. The db/init/*.sql scripts only execute on
     # the FIRST initialization of an empty data dir, so schema changes never reach an
     # already-initialized database (e.g. the NAS). This service applies the pending
-    # migrations (03 enrichment, 04 sensor_channels, 05 rain-totals) in order on every `up` and then exits;
-    # ingest/grafana wait for it to succeed. Reuses the db image (already present, no extra
-    # pull). Safe to re-run: DDL is IF NOT EXISTS and backfills only touch missing rows.
+    # migrations (03 enrichment, 04 sensor_channels, 05 rain-totals, 06 grafana-ro) in order on
+    # every `up` and then exits; ingest/grafana wait for it to succeed. Reuses the db image
+    # (already present, no extra pull). Safe to re-run: DDL is IF NOT EXISTS and backfills only
+    # touch missing rows.
     image: timescale/timescaledb-ha:pg17
     container_name: weather-migrate
     restart: "no"
@@ -37,6 +38,10 @@ services:
     command:
       - "-v"
       - "ON_ERROR_STOP=1"
+      # password for the read-only Grafana role created in 06-grafana-ro.sql; keep in sync with
+      # GRAFANA_DB_PASSWORD in the grafana service env (both default to 'grafana_ro').
+      - "-v"
+      - "grafana_ro_pw=${GRAFANA_DB_PASSWORD:-grafana_ro}"
       - "-h"
       - "db"
       - "-U"
@@ -49,6 +54,8 @@ services:
       - "/migrations/04-sensor-channels.sql"
       - "-f"
       - "/migrations/05-rain-totals.sql"
+      - "-f"
+      - "/migrations/06-grafana-ro.sql"
     volumes:
       - ./db/init:/migrations:ro
     depends_on:
@@ -72,15 +79,21 @@ services:
         condition: service_completed_successfully
 
   grafana:
-    image: grafana/grafana:latest
+    # Pinned deliberately (was :latest). Provisioned alerting formats and panel schemas change
+    # across majors, so a routine `docker compose pull` shouldn't be able to break the provisioned
+    # setup. 13.1.0 is the current stable line as of 2026-07. Bump intentionally after checking the
+    # release notes; confirm the running version with `docker compose exec grafana grafana server -v`.
+    image: grafana/grafana:13.1.0
     container_name: weather-grafana
     restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
-      # exposed to the datasource provisioning file (Grafana interpolates $VAR)
-      POSTGRES_USER: ${POSTGRES_USER:-weather}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-weather}
+      # Datasource connects as the read-only grafana_ro role (created by 06-grafana-ro.sql), NOT
+      # the owner — so the Explore tab can't run DDL/DML. Keep GRAFANA_DB_PASSWORD in sync with the
+      # -v grafana_ro_pw passed to the migrate service above. Exposed to timescale.yml as $VAR.
+      GRAFANA_DB_USER: ${GRAFANA_DB_USER:-grafana_ro}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:-grafana_ro}
       POSTGRES_DB: ${POSTGRES_DB:-weather}
       # destination for provisioned low-battery alerts (see grafana/provisioning/alerting/).
       # Set to a Discord/Slack/ntfy/Home-Assistant webhook URL. The default is a deliberately

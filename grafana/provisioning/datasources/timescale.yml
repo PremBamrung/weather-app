@@ -6,11 +6,13 @@ datasources:
     type: postgres
     access: proxy
     url: db:5432
-    # Grafana interpolates $VAR from the container env (see docker-compose grafana env).
-    # NOTE: Grafana does NOT support ${VAR:-default} bash syntax — plain $VAR only.
-    user: $POSTGRES_USER
+    # Connects as the read-only grafana_ro role (see db/init/06-grafana-ro.sql), not the DB owner,
+    # so nobody at the Explore tab can run DDL/DML. Grafana interpolates $VAR from the container
+    # env (see docker-compose grafana env). NOTE: Grafana does NOT support ${VAR:-default} bash
+    # syntax — plain $VAR only.
+    user: $GRAFANA_DB_USER
     secureJsonData:
-      password: $POSTGRES_PASSWORD
+      password: $GRAFANA_DB_PASSWORD
     jsonData:
       database: $POSTGRES_DB
       sslmode: disable
