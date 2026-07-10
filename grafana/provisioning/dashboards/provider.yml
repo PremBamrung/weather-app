@@ -7,7 +7,12 @@ providers:
     type: file
     disableDeletion: false
     updateIntervalSeconds: 30
-    allowUiUpdates: true
+    # The dashboards dir is mounted :ro and re-scanned every 30s, so any UI edit would be silently
+    # overwritten the next time the JSON changes and would never reach git. Make the file the honest
+    # source of truth: the UI shows a "provisioned, cannot save" banner and edits happen in the repo
+    # JSON. To prototype: tweak in the UI, copy the panel JSON back into the repo file, let the 30s
+    # rescan apply it. (See docs/running-locally.md.)
+    allowUiUpdates: false
     options:
       # dashboard JSON files are mounted here by docker-compose
       path: /var/lib/grafana/dashboards
