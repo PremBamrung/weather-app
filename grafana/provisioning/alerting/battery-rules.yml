@@ -1,11 +1,17 @@
 # Provisioned low-battery alert rules (Grafana unified alerting).
 #
-# Each rule runs a SQL query that returns a single number `metric` = how many sensors are
-# currently low (0 = all healthy), reduces it to the last value, and fires when it exceeds 0.
-# Batteries drain slowly, so a 15m evaluation with a 1h lookback is plenty and avoids flapping.
+# Each rule aggregates over the last hour rather than testing a single sample, so a lone noisy
+# reading near the threshold can't fire (and the per-channel rules can't flap). The multi-channel
+# sensors return ONE ROW PER CHANNEL (a `channel` label + a numeric `metric`), so the alert is
+# multi-dimensional: it fires per low channel and the notification names exactly which one is low
+# via {{ $labels.channel }} — instead of a count that collapses identity into "a WN31 is low".
 #
-# Routing: rules carry `group: battery`, matched by the notification policy in
-# notification-policies.yml -> the `battery-notifier` contact point (contact-points.yml).
+# Aggregate choice: WS69 and WN31 are 0/1 flags, so max() = "was it ever flagged low this hour".
+# WH51 reports a voltage that wobbles near 1.2 V, so avg() smooths it and avoids flapping.
+#
+# Batteries drain slowly, so a 15m evaluation with a 1h lookback is plenty. Routing: rules carry
+# `group: battery`, matched by the notification policy in notification-policies.yml -> the
+# `battery-notifier` contact point (contact-points.yml).
 apiVersion: 1
 
 groups:
@@ -35,9 +41,8 @@ groups:
               datasource: { type: postgres, uid: timescaledb }
               format: table
               rawSql: >
-                SELECT wh65_batt AS metric FROM weather_metrics
+                SELECT max(wh65_batt) AS metric FROM weather_metrics
                 WHERE wh65_batt IS NOT NULL AND time > now() - interval '1 hour'
-                ORDER BY time DESC LIMIT 1
           - refId: B
             datasourceUid: __expr__
             model:
@@ -67,7 +72,7 @@ groups:
           severity: warning
           sensor: wn31
         annotations:
-          summary: "A WN31 room temp/humidity sensor reports LOW battery (batt<ch>=1). Replace its 2×AA cells."
+          summary: "WN31 room sensor on channel {{ $labels.channel }} reports LOW battery. Replace its 2×AA cells."
         data:
           - refId: A
             relativeTimeRange: { from: 3600, to: 0 }
@@ -77,12 +82,10 @@ groups:
               datasource: { type: postgres, uid: timescaledb }
               format: table
               rawSql: >
-                SELECT count(*) AS metric FROM (
-                  SELECT DISTINCT ON (channel) channel, batt
-                  FROM sensor_channels
-                  WHERE sensor_type='wn31' AND batt IS NOT NULL AND time > now() - interval '1 hour'
-                  ORDER BY channel, time DESC
-                ) latest WHERE batt >= 1
+                SELECT channel::text AS channel, max(batt) AS metric
+                FROM sensor_channels
+                WHERE sensor_type='wn31' AND batt IS NOT NULL AND time > now() - interval '1 hour'
+                GROUP BY channel
           - refId: B
             datasourceUid: __expr__
             model:
@@ -112,7 +115,7 @@ groups:
           severity: warning
           sensor: wh51
         annotations:
-          summary: "A WH51 soil sensor battery dropped below 1.2 V (soilbatt<ch>). Replace its 1×AA cell."
+          summary: "WH51 soil sensor on channel {{ $labels.channel }} dropped below 1.2 V (hourly avg). Replace its 1×AA cell."
         data:
           - refId: A
             relativeTimeRange: { from: 3600, to: 0 }
@@ -122,12 +125,10 @@ groups:
               datasource: { type: postgres, uid: timescaledb }
               format: table
               rawSql: >
-                SELECT count(*) AS metric FROM (
-                  SELECT DISTINCT ON (channel) channel, batt
-                  FROM sensor_channels
-                  WHERE sensor_type='wh51' AND batt IS NOT NULL AND time > now() - interval '1 hour'
-                  ORDER BY channel, time DESC
-                ) latest WHERE batt < 1.2
+                SELECT channel::text AS channel, avg(batt) AS metric
+                FROM sensor_channels
+                WHERE sensor_type='wh51' AND batt IS NOT NULL AND time > now() - interval '1 hour'
+                GROUP BY channel
           - refId: B
             datasourceUid: __expr__
             model:
@@ -144,4 +145,4 @@ groups:
               datasource: { type: __expr__, uid: __expr__ }
               expression: B
               conditions:
-                - evaluator: { type: gt, params: [0] }
+                - evaluator: { type: lt, params: [1.2] }
