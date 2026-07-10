@@ -65,10 +65,28 @@ In the gateway web UI → **Custom Server**:
 Give the gateway a **DHCP reservation** so its IP never changes. Details:
 [GW3000 gateway](../hardware/gw3000-gateway.md).
 
+## Grafana dashboards & provisioning
+
+Dashboards, the datasource, and alert rules are all provisioned from `grafana/` — no click-ops.
+
+- **The JSON file is the source of truth.** `allowUiUpdates: false`, and the dashboards dir is
+  mounted read-only and re-scanned every 30 s. Editing a panel in the Grafana UI shows a
+  "provisioned, cannot save" banner. To change a dashboard: edit
+  `grafana/dashboards/weather-overview.json` in the repo — the rescan applies it within 30 s.
+  To prototype visually: tweak in the UI, open *Dashboard settings → JSON Model*, copy the
+  changed panel back into the repo file, and let the rescan pick it up.
+- **Grafana connects read-only.** The datasource logs in as the `grafana_ro` role (created by
+  `db/init/06-grafana-ro.sql`), which has `SELECT` only — so the Explore tab can't run DDL/DML.
+  Set `GRAFANA_DB_PASSWORD` in `.env` to change it (applied to the role on the next `up`).
+- **Alerts** live in `grafana/provisioning/alerting/`: low-battery rules (per channel) and a
+  pipeline dead-man's switch (fires if no data lands for 10 min). Both notify via the webhook in
+  `BATTERY_ALERT_WEBHOOK`.
+
 ## Notes
 
-- `db/init/*.sql` runs **only** on first init (empty data dir). To re-run after schema
-  changes: `docker compose down -v` (⚠️ wipes data) or apply migrations manually with `psql`.
+- `db/init/*.sql` runs **only** on first init (empty data dir); the one-shot `migrate` service
+  re-applies migrations `03`–`06` on every `up` (idempotent). To reset entirely:
+  `docker compose down -v` (⚠️ wipes data).
 - Inserts are idempotent on `(station_id, time)` — safe for the later
   [backfill pipeline](fault-tolerance.md).
 - The `raw` JSONB column keeps every field, so expansion-sensor data (WN31, WH51) is captured
