@@ -1,0 +1,58 @@
+# Provisioned pipeline dead-man's-switch alert (Grafana unified alerting).
+#
+# This is the single rule that covers gateway death, ingest crash, AND a wedged DB in one go:
+# it measures seconds since the newest weather_metrics row and fires when nothing has landed for
+# 10 minutes. Deliberately the OPPOSITE of the battery rules on no-data / exec-error handling —
+# here "no data" and "query failed" ARE the failure, so both must alert (a battery rule stays OK
+# on no-data because an absent sensor shouldn't page you; a dead pipeline must).
+#
+# Routing: carries `group: pipeline`, matched by the sibling route in notification-policies.yml
+# -> the shared battery-notifier contact point (contact-points.yml), with a shorter 4h repeat
+# because a dead pipeline loses data every minute.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: Pipeline
+    folder: Weather
+    interval: 5m
+    rules:
+      - uid: pipeline-stale
+        title: Weather pipeline stale (no data for 10 min)
+        condition: C
+        for: 5m
+        noDataState: Alerting        # unlike the battery rules — no data IS the failure here
+        execErrState: Alerting
+        labels:
+          group: pipeline
+          severity: critical
+        annotations:
+          summary: "No weather data for 10+ minutes — check the GW3000 gateway, the ingest service, and the DB."
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: timescaledb
+            model:
+              refId: A
+              datasource: { type: postgres, uid: timescaledb }
+              format: table
+              rawSql: >
+                SELECT EXTRACT(EPOCH FROM (now() - max(time))) AS metric
+                FROM weather_metrics
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [600] }

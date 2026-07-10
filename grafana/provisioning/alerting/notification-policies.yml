@@ -1,10 +1,9 @@
 # Notification routing. Provisioning a policy replaces the whole root policy and the root
 # receiver MUST reference an existing contact point — Grafana's built-in default receiver is
 # named inconsistently across versions ("empty" in 13.x, "grafana-default-email" earlier), so
-# we point the root at our own battery-notifier to stay self-contained. This stack's only
-# alerts are the battery rules; the nested group=battery route just gives them nicer grouping
-# and a 24h repeat (a low battery is a standing condition, not a per-cycle ping). If you add
-# non-battery alerts later, add sibling routes here.
+# we point the root at our own battery-notifier to stay self-contained. This stack's alerts are
+# the battery rules and the pipeline dead-man's switch; the nested routes below give each its own
+# grouping and repeat cadence. If you add more alerts later, add sibling routes here.
 apiVersion: 1
 
 policies:
@@ -12,6 +11,7 @@ policies:
     receiver: battery-notifier
     group_by: [grafana_folder, alertname]
     routes:
+      # Low-battery alerts: a standing condition, so a slow 24h repeat (not a per-cycle ping).
       - receiver: battery-notifier
         object_matchers:
           - [group, =, battery]
@@ -19,3 +19,11 @@ policies:
         group_wait: 30s
         group_interval: 5m
         repeat_interval: 24h
+      # Pipeline stale (dead-man's switch): a dead pipeline loses data every minute, so page
+      # faster and repeat every 4h until it recovers. Shares the battery-notifier contact point.
+      - receiver: battery-notifier
+        object_matchers:
+          - [group, =, pipeline]
+        group_wait: 0s
+        group_interval: 5m
+        repeat_interval: 4h
