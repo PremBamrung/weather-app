@@ -56,3 +56,9 @@ Every added sensor just adds more key-value pairs to the same HTTP POST body. Pl
   `BATTERY_ALERT_WEBHOOK` env var to route them to Slack/Discord/ntfy/etc.
 - Grafana surfaces the channels in a "Rooms & Soil" section on the Weather Overview dashboard
   (per-room temp/humidity + battery, soil moisture %/raw-AD + battery voltage).
+- **Channels are named, not numbered.** `sensor_locations` binds each `(sensor_type, channel)` to
+  a room, so panels read "Main bedroom" rather than "Room 1", and a "Floor plan" row paints the
+  apartment layout by temperature / RH / ΔT-vs-outdoor / sensor health. Note the DIP-switch
+  channel is what the binding keys on, so **re-DIPing a unit silently reassigns its room** —
+  update `sensor_locations` when you do. See
+  [database architecture](../pipeline/database.md#sensor-location-dimension-sensor_locations--room_readings).

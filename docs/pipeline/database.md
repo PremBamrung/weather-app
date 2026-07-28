@@ -122,3 +122,54 @@ CREATE TABLE sensor_channels (
 - The migration backfills soil history already captured in `weather_metrics.raw` from before the
   table existed. Compressed chunks older than the policy window can't be updated in place; the
   backfill only reaches uncompressed rows unless you decompress first.
+
+## Sensor location dimension (`sensor_locations` + `room_readings`)
+
+`sensor_channels` is keyed by `(sensor_type, channel)`, so on its own it can only ever say
+"Room 1". `db/init/07-sensor-locations.sql` adds the dimension table that names channels and the
+view that joins it in — the prerequisite for the
+[floor-plan heatmap](../grafana-floorplan-heatmap.md) and the fix for
+[grafana-review](../grafana-review.md) §5's channel-naming item.
+
+```sql
+CREATE TABLE sensor_locations (
+    station_id     TEXT        NOT NULL,
+    sensor_type    TEXT        NOT NULL,   -- 'wn31' | 'wh51' | 'gateway' | 'ws69'
+    channel        SMALLINT    NOT NULL,   -- 0 for single-instance sensors
+    room_key       TEXT        NOT NULL,   -- join key: canvas element / future GeoJSON feature id
+    room_label     TEXT        NOT NULL,   -- 'Main bedroom'
+    priority       SMALLINT    NOT NULL,   -- tie-break when a room has 2+ sensors; lower wins
+    calib_offset_c DOUBLE PRECISION NOT NULL,
+    installed_at   TIMESTAMPTZ NOT NULL,
+    removed_at     TIMESTAMPTZ,            -- NULL = still there
+    notes          TEXT,
+    PRIMARY KEY (station_id, sensor_type, channel, installed_at)
+);
+```
+
+**Rows are time-ranged, not current-state.** Sensors move — WN31 ch2 is in the desk room and is
+headed for the living room, and the WS69 array is indoors until it goes on the roof. A
+current-location-only table would retroactively relabel every past reading with the sensor's new
+room, silently corrupting the input to the [grey-box RC model](../ml/indoor-thermal.md). A move
+is therefore *close the old row, insert a new one*; the recipe is in the migration's footer. A
+partial unique index on `(station_id, sensor_type, channel) WHERE removed_at IS NULL` enforces
+one *active* location per sensor.
+
+`room_readings` is the view every room panel and floor-plan panel reads:
+
+- **Three sources**, because "a room's temperature" lives in three places today: WN31 channels
+  from `sensor_channels`, the GW3000's built-in `temp_in_c`/`humidity_in`, and the WS69's
+  `temp_c` while the array is still indoors. The WH51 is excluded — a soil probe reports no
+  ambient T/RH.
+- **The WN31 branch LEFT JOINs**, making the view a strict superset of the WN31 rows in
+  `sensor_channels`. An unregistered channel falls back to `room_key` `'ch<N>'` / label
+  `'Room <N>'` rather than vanishing, so per-room panels keep working while the floor plan
+  correctly declines to paint a sensor whose location is unknown. The gateway/WS69 branches stay
+  INNER — with no location row there is no room to attribute them to.
+- **`priority` breaks ties.** The desk room holds two sensors reporting on different cadences, so
+  ordering by time alone picks a winner arbitrarily and the displayed value flaps. Panels order by
+  `room_key, priority, time DESC`. Which sensor a room reports is a one-row `UPDATE`, not a
+  dashboard edit.
+- **`calib_offset_c` is applied in the view**, keeping raw values in the base table. The plain
+  WN31 is ±1 °C while inter-room deltas are only 1–3 °C, so the offsets matter more than the
+  tolerance suggests.
