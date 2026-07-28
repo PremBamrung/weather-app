@@ -70,7 +70,7 @@
   "timezone": "browser",
   "title": "Weather Overview",
   "uid": "weather-overview",
-  "version": 7,
+  "version": 8,
   "panels": [
     {
       "id": 1,
@@ -402,7 +402,7 @@
       "type": "canvas",
       "title": "Floor plan — temperature (°C)",
       "description": "Latest per-room air temperature within the selected time range. Flat fill per room, hard borders: with one sensor per room the field is NOT continuous across walls, so no interpolation is applied. Colour scale is pinned to 15–30 °C on purpose — inter-room deltas are only 1–3 °C, and a continuous scheme without an explicit min/max would give every room the same colour (each room is its own single-value field). Grey = no sensor.",
-      "gridPos": {"h": 17, "w": 6, "x": 0, "y": 70},
+      "gridPos": {"h": 22, "w": 8, "x": 0, "y": 70},
       "datasource": {"type": "postgres", "uid": "timescaledb"},
       "fieldConfig": { "defaults": {"unit": "celsius", "decimals": 1, "min": 15, "max": 30, "noValue": "no sensor", "mappings": [{"type": "special", "options": {"match": "null", "result": {"text": "no sensor", "color": "#9aa3af", "index": 0}}}], "color": {"mode": "continuous-BlYlRd"}}, "overrides": [] },
       "options": {
@@ -440,7 +440,7 @@
       "type": "canvas",
       "title": "Floor plan — relative humidity (%)",
       "description": "Latest per-room RH within the selected time range. Graded for the mould question rather than for comfort: orange below 30 % (winter-dry), green 30–60 %, yellow 60–70 %, red at 70 %+ — a cold exterior-wall room sitting above ~70 % is the mould story. Note this is a different grading from the outdoor-humidity stat, which reads blue = wet. Grey = no sensor.",
-      "gridPos": {"h": 17, "w": 6, "x": 6, "y": 70},
+      "gridPos": {"h": 22, "w": 8, "x": 8, "y": 70},
       "datasource": {"type": "postgres", "uid": "timescaledb"},
       "fieldConfig": { "defaults": {"unit": "humidity", "decimals": 0, "min": 0, "max": 100, "noValue": "no sensor", "mappings": [{"type": "special", "options": {"match": "null", "result": {"text": "no sensor", "color": "#9aa3af", "index": 0}}}], "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "orange", "value": null}, {"color": "green", "value": 30}, {"color": "yellow", "value": 60}, {"color": "red", "value": 70}]}}, "overrides": [] },
       "options": {
@@ -478,7 +478,7 @@
       "type": "canvas",
       "title": "Floor plan — ΔT vs outdoor (°C)",
       "description": "Each room's latest temperature minus the latest WS69 outdoor reading — envelope performance. TWO caveats. (1) The WS69 is currently INDOORS in Room 1, so there is no true outdoor reference yet: Room 1 reads ~0 by construction and every other room reads its offset from Room 1. This fixes itself when the array goes on the roof. (2) The outdoor term is common to all rooms, so room-to-room differences here are the same 1–3 °C as on the temperature panel; read the numbers, not the colours, for comparison. Colour indicates the season-scale gradient. Grey = no sensor.",
-      "gridPos": {"h": 17, "w": 6, "x": 12, "y": 70},
+      "gridPos": {"h": 22, "w": 8, "x": 16, "y": 70},
       "datasource": {"type": "postgres", "uid": "timescaledb"},
       "fieldConfig": { "defaults": {"unit": "celsius", "decimals": 1, "noValue": "no sensor", "mappings": [{"type": "special", "options": {"match": "null", "result": {"text": "no sensor", "color": "#9aa3af", "index": 0}}}], "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}, {"color": "green", "value": 0}, {"color": "yellow", "value": 10}, {"color": "orange", "value": 20}, {"color": "red", "value": 30}]}}, "overrides": [] },
       "options": {
@@ -512,51 +512,13 @@
       ]
     },
     {
-      "id": 43,
-      "type": "canvas",
-      "title": "Floor plan — sensor health (time since last report)",
-      "description": "Age of the reading the other three floor-plan panels are showing — same room/priority selection, so this cannot go green on a live backup sensor while the temperature panel displays a dead one's stale value. Ignores the dashboard time range on purpose: liveness is always relative to now. Catches a dead sensor AND a dying battery, which the WN31's binary batt flag only reveals once it is nearly too late. The WN31 broadcasts every ~60 s. Green < 5 min, red ≥ 1 h. Per-channel battery flags stay on the per-room rows and the provisioned battery alerts. Grey = no sensor.",
-      "gridPos": {"h": 17, "w": 6, "x": 18, "y": 70},
-      "datasource": {"type": "postgres", "uid": "timescaledb"},
-      "fieldConfig": { "defaults": {"unit": "s", "decimals": 0, "noValue": "no sensor", "mappings": [{"type": "special", "options": {"match": "null", "result": {"text": "no sensor", "color": "#9aa3af", "index": 0}}}], "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 300}, {"color": "orange", "value": 900}, {"color": "red", "value": 3600}]}}, "overrides": [] },
-      "options": {
-        "inlineEditing": false, "showAdvancedTypes": true, "panZoom": false, "infinitePan": false,
-        "root": {
-          "type": "frame", "name": "Element 1",
-          "constraint": {"horizontal": "left", "vertical": "top"},
-          "placement": {"left": 0, "top": 0, "width": 100, "height": 100, "rotation": 0},
-          "background": {"color": {"fixed": "transparent"}},
-          "border": {"color": {"fixed": "transparent"}},
-          "elements": [
-            {"type": "rectangle", "name": "living-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Room 1"}}, "background": {"color": {"field": "Room 1", "fixed": "#9aa3af"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 0.0, "top": 0.0, "right": 50.06, "bottom": 37.24, "rotation": 0}},
-            {"type": "metric-value", "name": "living-value", "config": {"align": "center", "valign": "middle", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Room 1"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 0.0, "top": 0.0, "right": 50.06, "bottom": 37.24, "rotation": 0}},
-            {"type": "rectangle", "name": "bedroom-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Main bedroom"}}, "background": {"color": {"field": "Main bedroom", "fixed": "#9aa3af"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 0.0, "right": 1.41, "bottom": 64.22, "rotation": 0}},
-            {"type": "metric-value", "name": "bedroom-value", "config": {"align": "center", "valign": "middle", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Main bedroom"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 0.0, "right": 1.41, "bottom": 64.22, "rotation": 0}},
-            {"type": "rectangle", "name": "bathroom-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Bathroom"}}, "background": {"color": {"field": "Bathroom", "fixed": "#9aa3af"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 44.4, "right": 1.41, "bottom": 41.38, "rotation": 0}},
-            {"type": "metric-value", "name": "bathroom-value", "config": {"align": "center", "valign": "middle", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Bathroom"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 44.4, "right": 1.41, "bottom": 41.38, "rotation": 0}},
-            {"type": "rectangle", "name": "kitchen-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Kitchen"}}, "background": {"color": {"field": "Kitchen", "fixed": "#9aa3af"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 8.07, "top": 62.84, "right": 49.94, "bottom": 22.41, "rotation": 0}},
-            {"type": "metric-value", "name": "kitchen-value", "config": {"align": "center", "valign": "middle", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Kitchen"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 8.07, "top": 62.84, "right": 49.94, "bottom": 22.41, "rotation": 0}},
-            {"type": "rectangle", "name": "desk-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Desk room"}}, "background": {"color": {"field": "Desk room", "fixed": "#9aa3af"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.19, "top": 66.47, "right": 0.0, "bottom": 2.24, "rotation": 0}},
-            {"type": "metric-value", "name": "desk-value", "config": {"align": "center", "valign": "middle", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Desk room"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.19, "top": 66.47, "right": 0.0, "bottom": 2.24, "rotation": 0}},
-            {"type": "rectangle", "name": "entrance-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Entrance"}}, "background": {"color": {"field": "Entrance", "fixed": "#9aa3af"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 30.86, "top": 77.67, "right": 52.11, "bottom": 0.43, "rotation": 0}},
-            {"type": "metric-value", "name": "entrance-value", "config": {"align": "center", "valign": "middle", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Entrance"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 30.86, "top": 77.67, "right": 52.11, "bottom": 0.43, "rotation": 0}},
-            {"type": "rectangle", "name": "storage-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Storage"}}, "background": {"color": {"field": "Storage", "fixed": "#9aa3af"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 1.41, "top": 83.97, "right": 71.45, "bottom": 0.0, "rotation": 0}},
-            {"type": "metric-value", "name": "storage-value", "config": {"align": "center", "valign": "middle", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Storage"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 1.41, "top": 83.97, "right": 71.45, "bottom": 0.0, "rotation": 0}}
-      ]
-        }
-      },
-      "targets": [
-        { "refId": "A", "datasource": {"type": "postgres", "uid": "timescaledb"}, "rawQuery": true, "format": "table", "rawSql": "SELECT now() AS \"time\",\n       max(age_s) FILTER (WHERE room_key = 'living') AS \"Room 1\",\n       max(age_s) FILTER (WHERE room_key = 'bedroom') AS \"Main bedroom\",\n       max(age_s) FILTER (WHERE room_key = 'bathroom') AS \"Bathroom\",\n       max(age_s) FILTER (WHERE room_key = 'kitchen') AS \"Kitchen\",\n       max(age_s) FILTER (WHERE room_key = 'desk') AS \"Desk room\",\n       max(age_s) FILTER (WHERE room_key = 'entrance') AS \"Entrance\",\n       max(age_s) FILTER (WHERE room_key = 'storage') AS \"Storage\"\nFROM (SELECT DISTINCT ON (room_key) room_key,\n               EXTRACT(EPOCH FROM (now() - time))::double precision AS age_s\n        FROM room_readings\n        WHERE station_id IN ($station) AND temp_c IS NOT NULL\n        ORDER BY room_key, priority, time DESC) q" }
-      ]
-    },
-    {
       "id": 24,
       "type": "row",
       "title": "${wn31_ch:text} — WN31",
       "collapsed": false,
       "repeat": "wn31_ch",
       "repeatDirection": "h",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 87 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 92 },
       "panels": []
     },
     {
@@ -564,7 +526,7 @@
       "type": "stat",
       "title": "${wn31_ch:text} — temp",
       "description": "Room air temperature from its WN31 channel, with any per-unit calibration offset from sensor_locations applied.",
-      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 88 },
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 93 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": { "defaults": { "unit": "celsius", "decimals": 1, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null }, { "color": "green", "value": 18 }, { "color": "orange", "value": 25 }, { "color": "red", "value": 30 } ] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto", "justifyMode": "auto" },
@@ -577,7 +539,7 @@
       "type": "stat",
       "title": "${wn31_ch:text} — RH",
       "description": "Room relative humidity from its WN31 channel.",
-      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 88 },
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 93 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": { "defaults": { "unit": "humidity", "decimals": 0, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "orange", "value": null }, { "color": "green", "value": 30 }, { "color": "blue", "value": 70 } ] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto", "justifyMode": "auto" },
@@ -590,7 +552,7 @@
       "type": "stat",
       "title": "${wn31_ch:text} — battery",
       "description": "WN31 battery flag for this room's channel (0=OK, 1=LOW). Reads sensor_channels directly, not room_readings: battery is a property of the device, and it must stay visible even for a channel with no room assigned.",
-      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 88 },
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 93 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": {
         "defaults": {
@@ -614,7 +576,7 @@
       "type": "timeseries",
       "title": "${wn31_ch:text} — temp & humidity",
       "description": "Room history from its WN31 channel. Temp (left axis) / RH (right axis).",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 92 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 97 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": {
         "defaults": { "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10, "showPoints": "never" } },
@@ -635,7 +597,7 @@
       "collapsed": false,
       "repeat": "wh51_ch",
       "repeatDirection": "h",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 100 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 105 },
       "panels": []
     },
     {
@@ -643,7 +605,7 @@
       "type": "stat",
       "title": "Soil $wh51_ch moisture",
       "description": "WH51 channel $wh51_ch calibrated soil moisture %.",
-      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 101 },
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 106 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": { "defaults": { "unit": "percent", "decimals": 0, "min": 0, "max": 100, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "orange", "value": 20 }, { "color": "green", "value": 35 }, { "color": "blue", "value": 75 } ] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto", "justifyMode": "auto" },
@@ -656,7 +618,7 @@
       "type": "stat",
       "title": "Soil $wh51_ch battery",
       "description": "WH51 channel $wh51_ch battery voltage. Replace below ~1.2 V.",
-      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 101 },
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 106 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": { "defaults": { "unit": "volt", "decimals": 2, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "orange", "value": 1.2 }, { "color": "green", "value": 1.35 } ] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "auto", "justifyMode": "auto" },
@@ -669,7 +631,7 @@
       "type": "timeseries",
       "title": "Soil $wh51_ch — calibrated % & raw AD",
       "description": "WH51 channel $wh51_ch. Kept dual-axis deliberately: this panel IS the calibration check — divergence between % and raw AD is the message.",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 105 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 110 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": {
         "defaults": { "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 12, "showPoints": "never" } },
@@ -688,14 +650,14 @@
       "type": "row",
       "title": "Station health",
       "collapsed": true,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 113 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 118 },
       "panels": [
         {
           "id": 34,
           "type": "stat",
           "title": "WS69 array battery",
           "description": "Outdoor WS69 (WH65) array battery flag (0=OK, 1=LOW). Replace the 2×AA backup cells.",
-          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 114 },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 119 },
           "datasource": { "type": "postgres", "uid": "timescaledb" },
           "fieldConfig": {
             "defaults": {
@@ -719,7 +681,7 @@
           "type": "timeseries",
           "title": "Reports per 5 min",
           "description": "Ingest liveness: rows landed in weather_metrics per bucket. Flatlines to zero when the gateway, ingest service, or DB stops.",
-          "gridPos": { "h": 8, "w": 18, "x": 6, "y": 114 },
+          "gridPos": { "h": 8, "w": 18, "x": 6, "y": 119 },
           "datasource": { "type": "postgres", "uid": "timescaledb" },
           "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "custom": { "drawStyle": "bars", "fillOpacity": 60, "showPoints": "never" }, "color": { "mode": "fixed", "fixedColor": "green" } }, "overrides": [] },
           "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }, "tooltip": { "mode": "single", "sort": "none" } },
@@ -732,7 +694,7 @@
           "type": "timeseries",
           "title": "Soil battery (V) — all channels",
           "description": "WH51 battery voltage over time with 1.2 / 1.35 V threshold lines.",
-          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 122 },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 127 },
           "datasource": { "type": "postgres", "uid": "timescaledb" },
           "fieldConfig": { "defaults": { "unit": "volt", "decimals": 2, "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 8, "showPoints": "never", "thresholdsStyle": { "mode": "line" } }, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "orange", "value": 1.2 }, { "color": "green", "value": 1.35 } ] } }, "overrides": [] },
           "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
