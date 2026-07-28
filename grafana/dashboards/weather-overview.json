@@ -40,15 +40,16 @@
       },
       {
         "name": "wn31_ch",
-        "label": "Room channel (WN31)",
+        "label": "Room (WN31)",
+        "description": "Value is the DIP-switch channel; display text is the room name from sensor_locations. Use ${wn31_ch:text} for the label and $wn31_ch for the channel number. A channel with no sensor_locations row falls back to 'Room <N>' so it never disappears from the picker.",
         "type": "query",
         "datasource": { "type": "postgres", "uid": "timescaledb" },
-        "query": "SELECT DISTINCT channel FROM sensor_channels WHERE sensor_type='wn31' ORDER BY 1",
+        "query": "SELECT COALESCE(sl.room_label, 'Room ' || sc.channel) AS __text, sc.channel AS __value FROM (SELECT DISTINCT channel FROM sensor_channels WHERE sensor_type='wn31') sc LEFT JOIN sensor_locations sl ON sl.sensor_type='wn31' AND sl.channel=sc.channel AND sl.removed_at IS NULL ORDER BY 2",
         "refresh": 1,
         "includeAll": true,
         "multi": true,
         "current": { "selected": true, "text": ["All"], "value": ["$__all"] },
-        "sort": 3
+        "sort": 0
       },
       {
         "name": "wh51_ch",
@@ -69,7 +70,7 @@
   "timezone": "browser",
   "title": "Weather Overview",
   "uid": "weather-overview",
-  "version": 5,
+  "version": 6,
   "panels": [
     {
       "id": 1,
@@ -193,26 +194,26 @@
       "id": 37,
       "type": "timeseries",
       "title": "All sensors — temperature (°C)",
-      "description": "Every temperature sensor on one chart: outdoor + indoor (WS69/GW3000) and each WN31 room channel. Adapts automatically as WN31 channels appear or drop out.",
+      "description": "Every temperature sensor on one chart: outdoor + indoor (WS69/GW3000) and each WN31 room channel, labelled by room name. Adapts automatically as WN31 channels appear or drop out. The WN31 series are filtered to sensor_type='wn31' so the room_readings view's gateway and WS69 branches don't duplicate the Indoor/Outdoor series.",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": { "defaults": { "unit": "celsius", "decimals": 1, "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 0, "showPoints": "never" } }, "overrides": [] },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true, "calcs": ["lastNotNull"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "targets": [
-        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT $__timeGroup(time, $__interval) AS \"time\", 'Outdoor' AS metric, avg(temp_c) AS value FROM weather_metrics WHERE $__timeFilter(time) AND station_id IN ($station) AND temp_c IS NOT NULL GROUP BY 1 UNION ALL SELECT $__timeGroup(time, $__interval), 'Indoor', avg(temp_in_c) FROM weather_metrics WHERE $__timeFilter(time) AND station_id IN ($station) AND temp_in_c IS NOT NULL GROUP BY 1 UNION ALL SELECT $__timeGroup(time, $__interval), 'Room '||channel, avg(temp_c) FROM sensor_channels WHERE sensor_type='wn31' AND channel IN ($wn31_ch) AND station_id IN ($station) AND temp_c IS NOT NULL AND $__timeFilter(time) GROUP BY 1, channel ORDER BY 1" }
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT $__timeGroup(time, $__interval) AS \"time\", 'Outdoor' AS metric, avg(temp_c) AS value FROM weather_metrics WHERE $__timeFilter(time) AND station_id IN ($station) AND temp_c IS NOT NULL GROUP BY 1 UNION ALL SELECT $__timeGroup(time, $__interval), 'Indoor', avg(temp_in_c) FROM weather_metrics WHERE $__timeFilter(time) AND station_id IN ($station) AND temp_in_c IS NOT NULL GROUP BY 1 UNION ALL SELECT $__timeGroup(time, $__interval), room_label, avg(temp_c) FROM room_readings WHERE sensor_type='wn31' AND channel IN ($wn31_ch) AND station_id IN ($station) AND temp_c IS NOT NULL AND $__timeFilter(time) GROUP BY 1, room_label ORDER BY 1" }
       ]
     },
     {
       "id": 38,
       "type": "timeseries",
       "title": "All sensors — humidity (%)",
-      "description": "Every humidity sensor on one chart: outdoor + indoor and each WN31 room channel.",
+      "description": "Every humidity sensor on one chart: outdoor + indoor and each WN31 room channel, labelled by room name.",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": { "defaults": { "unit": "humidity", "decimals": 0, "min": 0, "max": 100, "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 0, "showPoints": "never" } }, "overrides": [] },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true, "calcs": ["lastNotNull"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "targets": [
-        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT $__timeGroup(time, $__interval) AS \"time\", 'Outdoor' AS metric, avg(humidity) AS value FROM weather_metrics WHERE $__timeFilter(time) AND station_id IN ($station) AND humidity IS NOT NULL GROUP BY 1 UNION ALL SELECT $__timeGroup(time, $__interval), 'Indoor', avg(humidity_in) FROM weather_metrics WHERE $__timeFilter(time) AND station_id IN ($station) AND humidity_in IS NOT NULL GROUP BY 1 UNION ALL SELECT $__timeGroup(time, $__interval), 'Room '||channel, avg(humidity) FROM sensor_channels WHERE sensor_type='wn31' AND channel IN ($wn31_ch) AND station_id IN ($station) AND humidity IS NOT NULL AND $__timeFilter(time) GROUP BY 1, channel ORDER BY 1" }
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT $__timeGroup(time, $__interval) AS \"time\", 'Outdoor' AS metric, avg(humidity) AS value FROM weather_metrics WHERE $__timeFilter(time) AND station_id IN ($station) AND humidity IS NOT NULL GROUP BY 1 UNION ALL SELECT $__timeGroup(time, $__interval), 'Indoor', avg(humidity_in) FROM weather_metrics WHERE $__timeFilter(time) AND station_id IN ($station) AND humidity_in IS NOT NULL GROUP BY 1 UNION ALL SELECT $__timeGroup(time, $__interval), room_label, avg(humidity) FROM room_readings WHERE sensor_type='wn31' AND channel IN ($wn31_ch) AND station_id IN ($station) AND humidity IS NOT NULL AND $__timeFilter(time) GROUP BY 1, room_label ORDER BY 1" }
       ]
     },
     {
@@ -389,47 +390,208 @@
       ]
     },
     {
+      "id": 39,
+      "type": "row",
+      "title": "Floor plan",
+      "collapsed": true,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 69},
+      "panels": [
+        {
+          "id": 40,
+          "type": "canvas",
+          "title": "Floor plan — temperature (°C)",
+          "description": "Latest per-room air temperature within the selected time range. Flat fill per room, hard borders: with one sensor per room the field is NOT continuous across walls, so no interpolation is applied. Colour scale is pinned to 15–30 °C on purpose — inter-room deltas are only 1–3 °C, and a continuous scheme without an explicit min/max would give every room the same colour (each room is its own single-value field). Grey = no sensor.",
+          "gridPos": {"h": 14, "w": 6, "x": 0, "y": 70},
+          "datasource": {"type": "postgres", "uid": "timescaledb"},
+          "fieldConfig": { "defaults": {"unit": "celsius", "decimals": 1, "min": 15, "max": 30, "noValue": "—", "color": {"mode": "continuous-BlYlRd"}}, "overrides": [] },
+          "options": {
+            "inlineEditing": true, "showAdvancedTypes": true, "panZoom": false, "infinitePan": false,
+            "root": {
+              "type": "frame", "name": "Element 1",
+              "constraint": {"horizontal": "left", "vertical": "top"},
+              "placement": {"left": 0, "top": 0, "width": 100, "height": 100, "rotation": 0},
+              "background": {"color": {"fixed": "transparent"}},
+              "border": {"color": {"fixed": "transparent"}},
+              "elements": [
+                {"type": "rectangle", "name": "living-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Room 1"}}, "background": {"color": {"field": "Room 1", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 0.0, "top": 0.0, "width": 49.94, "height": 62.76, "rotation": 0}},
+                {"type": "metric-value", "name": "living-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Room 1"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 0.0, "top": 0.0, "width": 49.94, "height": 62.76, "rotation": 0}},
+                {"type": "rectangle", "name": "bedroom-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Main bedroom"}}, "background": {"color": {"field": "Main bedroom", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 0.0, "width": 48.53, "height": 35.78, "rotation": 0}},
+                {"type": "metric-value", "name": "bedroom-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Main bedroom"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 0.0, "width": 48.53, "height": 35.78, "rotation": 0}},
+                {"type": "rectangle", "name": "bathroom-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Bathroom"}}, "background": {"color": {"field": "Bathroom", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 44.4, "width": 48.53, "height": 14.22, "rotation": 0}},
+                {"type": "metric-value", "name": "bathroom-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Bathroom"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 44.4, "width": 48.53, "height": 14.22, "rotation": 0}},
+                {"type": "rectangle", "name": "kitchen-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Kitchen"}}, "background": {"color": {"field": "Kitchen", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 8.07, "top": 62.84, "width": 42.0, "height": 14.74, "rotation": 0}},
+                {"type": "metric-value", "name": "kitchen-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Kitchen"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 8.07, "top": 62.84, "width": 42.0, "height": 14.74, "rotation": 0}},
+                {"type": "rectangle", "name": "desk-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Desk room"}}, "background": {"color": {"field": "Desk room", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.19, "top": 66.47, "width": 49.81, "height": 31.29, "rotation": 0}},
+                {"type": "metric-value", "name": "desk-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Desk room"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.19, "top": 66.47, "width": 49.81, "height": 31.29, "rotation": 0}},
+                {"type": "rectangle", "name": "entrance-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Entrance"}}, "background": {"color": {"field": "Entrance", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 30.86, "top": 77.67, "width": 17.03, "height": 21.9, "rotation": 0}},
+                {"type": "metric-value", "name": "entrance-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Entrance"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 30.86, "top": 77.67, "width": 17.03, "height": 21.9, "rotation": 0}},
+                {"type": "rectangle", "name": "storage-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Storage"}}, "background": {"color": {"field": "Storage", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 1.41, "top": 83.97, "width": 27.14, "height": 16.03, "rotation": 0}},
+                {"type": "metric-value", "name": "storage-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Storage"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 1.41, "top": 83.97, "width": 27.14, "height": 16.03, "rotation": 0}}
+              ]
+            }
+          },
+          "targets": [
+            { "refId": "A", "datasource": {"type": "postgres", "uid": "timescaledb"}, "rawQuery": true, "format": "table", "rawSql": "SELECT now() AS \"time\",\n       max(temp_c) FILTER (WHERE room_key = 'living') AS \"Room 1\",\n       max(temp_c) FILTER (WHERE room_key = 'bedroom') AS \"Main bedroom\",\n       max(temp_c) FILTER (WHERE room_key = 'bathroom') AS \"Bathroom\",\n       max(temp_c) FILTER (WHERE room_key = 'kitchen') AS \"Kitchen\",\n       max(temp_c) FILTER (WHERE room_key = 'desk') AS \"Desk room\",\n       max(temp_c) FILTER (WHERE room_key = 'entrance') AS \"Entrance\",\n       max(temp_c) FILTER (WHERE room_key = 'storage') AS \"Storage\"\nFROM (SELECT DISTINCT ON (room_key) room_key, temp_c\n        FROM room_readings\n        WHERE $__timeFilter(time) AND station_id IN ($station) AND temp_c IS NOT NULL\n        ORDER BY room_key, priority, time DESC) q" }
+          ]
+        },
+        {
+          "id": 41,
+          "type": "canvas",
+          "title": "Floor plan — relative humidity (%)",
+          "description": "Latest per-room RH within the selected time range. Graded for the mould question rather than for comfort: orange below 30 % (winter-dry), green 30–60 %, yellow 60–70 %, red at 70 %+ — a cold exterior-wall room sitting above ~70 % is the mould story. Note this is a different grading from the outdoor-humidity stat, which reads blue = wet. Grey = no sensor.",
+          "gridPos": {"h": 14, "w": 6, "x": 6, "y": 70},
+          "datasource": {"type": "postgres", "uid": "timescaledb"},
+          "fieldConfig": { "defaults": {"unit": "humidity", "decimals": 0, "min": 0, "max": 100, "noValue": "—", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "orange", "value": null}, {"color": "green", "value": 30}, {"color": "yellow", "value": 60}, {"color": "red", "value": 70}]}}, "overrides": [] },
+          "options": {
+            "inlineEditing": true, "showAdvancedTypes": true, "panZoom": false, "infinitePan": false,
+            "root": {
+              "type": "frame", "name": "Element 1",
+              "constraint": {"horizontal": "left", "vertical": "top"},
+              "placement": {"left": 0, "top": 0, "width": 100, "height": 100, "rotation": 0},
+              "background": {"color": {"fixed": "transparent"}},
+              "border": {"color": {"fixed": "transparent"}},
+              "elements": [
+                {"type": "rectangle", "name": "living-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Room 1"}}, "background": {"color": {"field": "Room 1", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 0.0, "top": 0.0, "width": 49.94, "height": 62.76, "rotation": 0}},
+                {"type": "metric-value", "name": "living-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Room 1"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 0.0, "top": 0.0, "width": 49.94, "height": 62.76, "rotation": 0}},
+                {"type": "rectangle", "name": "bedroom-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Main bedroom"}}, "background": {"color": {"field": "Main bedroom", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 0.0, "width": 48.53, "height": 35.78, "rotation": 0}},
+                {"type": "metric-value", "name": "bedroom-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Main bedroom"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 0.0, "width": 48.53, "height": 35.78, "rotation": 0}},
+                {"type": "rectangle", "name": "bathroom-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Bathroom"}}, "background": {"color": {"field": "Bathroom", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 44.4, "width": 48.53, "height": 14.22, "rotation": 0}},
+                {"type": "metric-value", "name": "bathroom-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Bathroom"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 44.4, "width": 48.53, "height": 14.22, "rotation": 0}},
+                {"type": "rectangle", "name": "kitchen-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Kitchen"}}, "background": {"color": {"field": "Kitchen", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 8.07, "top": 62.84, "width": 42.0, "height": 14.74, "rotation": 0}},
+                {"type": "metric-value", "name": "kitchen-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Kitchen"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 8.07, "top": 62.84, "width": 42.0, "height": 14.74, "rotation": 0}},
+                {"type": "rectangle", "name": "desk-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Desk room"}}, "background": {"color": {"field": "Desk room", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.19, "top": 66.47, "width": 49.81, "height": 31.29, "rotation": 0}},
+                {"type": "metric-value", "name": "desk-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Desk room"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.19, "top": 66.47, "width": 49.81, "height": 31.29, "rotation": 0}},
+                {"type": "rectangle", "name": "entrance-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Entrance"}}, "background": {"color": {"field": "Entrance", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 30.86, "top": 77.67, "width": 17.03, "height": 21.9, "rotation": 0}},
+                {"type": "metric-value", "name": "entrance-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Entrance"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 30.86, "top": 77.67, "width": 17.03, "height": 21.9, "rotation": 0}},
+                {"type": "rectangle", "name": "storage-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Storage"}}, "background": {"color": {"field": "Storage", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 1.41, "top": 83.97, "width": 27.14, "height": 16.03, "rotation": 0}},
+                {"type": "metric-value", "name": "storage-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Storage"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 1.41, "top": 83.97, "width": 27.14, "height": 16.03, "rotation": 0}}
+              ]
+            }
+          },
+          "targets": [
+            { "refId": "A", "datasource": {"type": "postgres", "uid": "timescaledb"}, "rawQuery": true, "format": "table", "rawSql": "SELECT now() AS \"time\",\n       max(humidity) FILTER (WHERE room_key = 'living') AS \"Room 1\",\n       max(humidity) FILTER (WHERE room_key = 'bedroom') AS \"Main bedroom\",\n       max(humidity) FILTER (WHERE room_key = 'bathroom') AS \"Bathroom\",\n       max(humidity) FILTER (WHERE room_key = 'kitchen') AS \"Kitchen\",\n       max(humidity) FILTER (WHERE room_key = 'desk') AS \"Desk room\",\n       max(humidity) FILTER (WHERE room_key = 'entrance') AS \"Entrance\",\n       max(humidity) FILTER (WHERE room_key = 'storage') AS \"Storage\"\nFROM (SELECT DISTINCT ON (room_key) room_key, humidity\n        FROM room_readings\n        WHERE $__timeFilter(time) AND station_id IN ($station) AND humidity IS NOT NULL\n        ORDER BY room_key, priority, time DESC) q" }
+          ]
+        },
+        {
+          "id": 42,
+          "type": "canvas",
+          "title": "Floor plan — ΔT vs outdoor (°C)",
+          "description": "Each room's latest temperature minus the latest WS69 outdoor reading — envelope performance. TWO caveats. (1) The WS69 is currently INDOORS in Room 1, so there is no true outdoor reference yet: Room 1 reads ~0 by construction and every other room reads its offset from Room 1. This fixes itself when the array goes on the roof. (2) The outdoor term is common to all rooms, so room-to-room differences here are the same 1–3 °C as on the temperature panel; read the numbers, not the colours, for comparison. Colour indicates the season-scale gradient. Grey = no sensor.",
+          "gridPos": {"h": 14, "w": 6, "x": 12, "y": 70},
+          "datasource": {"type": "postgres", "uid": "timescaledb"},
+          "fieldConfig": { "defaults": {"unit": "celsius", "decimals": 1, "noValue": "—", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}, {"color": "green", "value": 0}, {"color": "yellow", "value": 10}, {"color": "orange", "value": 20}, {"color": "red", "value": 30}]}}, "overrides": [] },
+          "options": {
+            "inlineEditing": true, "showAdvancedTypes": true, "panZoom": false, "infinitePan": false,
+            "root": {
+              "type": "frame", "name": "Element 1",
+              "constraint": {"horizontal": "left", "vertical": "top"},
+              "placement": {"left": 0, "top": 0, "width": 100, "height": 100, "rotation": 0},
+              "background": {"color": {"fixed": "transparent"}},
+              "border": {"color": {"fixed": "transparent"}},
+              "elements": [
+                {"type": "rectangle", "name": "living-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Room 1"}}, "background": {"color": {"field": "Room 1", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 0.0, "top": 0.0, "width": 49.94, "height": 62.76, "rotation": 0}},
+                {"type": "metric-value", "name": "living-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Room 1"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 0.0, "top": 0.0, "width": 49.94, "height": 62.76, "rotation": 0}},
+                {"type": "rectangle", "name": "bedroom-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Main bedroom"}}, "background": {"color": {"field": "Main bedroom", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 0.0, "width": 48.53, "height": 35.78, "rotation": 0}},
+                {"type": "metric-value", "name": "bedroom-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Main bedroom"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 0.0, "width": 48.53, "height": 35.78, "rotation": 0}},
+                {"type": "rectangle", "name": "bathroom-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Bathroom"}}, "background": {"color": {"field": "Bathroom", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 44.4, "width": 48.53, "height": 14.22, "rotation": 0}},
+                {"type": "metric-value", "name": "bathroom-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Bathroom"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 44.4, "width": 48.53, "height": 14.22, "rotation": 0}},
+                {"type": "rectangle", "name": "kitchen-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Kitchen"}}, "background": {"color": {"field": "Kitchen", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 8.07, "top": 62.84, "width": 42.0, "height": 14.74, "rotation": 0}},
+                {"type": "metric-value", "name": "kitchen-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Kitchen"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 8.07, "top": 62.84, "width": 42.0, "height": 14.74, "rotation": 0}},
+                {"type": "rectangle", "name": "desk-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Desk room"}}, "background": {"color": {"field": "Desk room", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.19, "top": 66.47, "width": 49.81, "height": 31.29, "rotation": 0}},
+                {"type": "metric-value", "name": "desk-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Desk room"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.19, "top": 66.47, "width": 49.81, "height": 31.29, "rotation": 0}},
+                {"type": "rectangle", "name": "entrance-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Entrance"}}, "background": {"color": {"field": "Entrance", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 30.86, "top": 77.67, "width": 17.03, "height": 21.9, "rotation": 0}},
+                {"type": "metric-value", "name": "entrance-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Entrance"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 30.86, "top": 77.67, "width": 17.03, "height": 21.9, "rotation": 0}},
+                {"type": "rectangle", "name": "storage-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Storage"}}, "background": {"color": {"field": "Storage", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 1.41, "top": 83.97, "width": 27.14, "height": 16.03, "rotation": 0}},
+                {"type": "metric-value", "name": "storage-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Storage"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 1.41, "top": 83.97, "width": 27.14, "height": 16.03, "rotation": 0}}
+              ]
+            }
+          },
+          "targets": [
+            { "refId": "A", "datasource": {"type": "postgres", "uid": "timescaledb"}, "rawQuery": true, "format": "table", "rawSql": "WITH outdoor AS (\n  SELECT temp_c FROM weather_metrics\n  WHERE $__timeFilter(time) AND station_id IN ($station) AND temp_c IS NOT NULL\n  ORDER BY time DESC LIMIT 1\n), latest AS (\n  SELECT DISTINCT ON (room_key) room_key, temp_c\n  FROM room_readings\n  WHERE $__timeFilter(time) AND station_id IN ($station) AND temp_c IS NOT NULL\n  ORDER BY room_key, priority, time DESC\n)\nSELECT now() AS \"time\",\n       max(l.temp_c - o.temp_c) FILTER (WHERE l.room_key = 'living') AS \"Room 1\",\n       max(l.temp_c - o.temp_c) FILTER (WHERE l.room_key = 'bedroom') AS \"Main bedroom\",\n       max(l.temp_c - o.temp_c) FILTER (WHERE l.room_key = 'bathroom') AS \"Bathroom\",\n       max(l.temp_c - o.temp_c) FILTER (WHERE l.room_key = 'kitchen') AS \"Kitchen\",\n       max(l.temp_c - o.temp_c) FILTER (WHERE l.room_key = 'desk') AS \"Desk room\",\n       max(l.temp_c - o.temp_c) FILTER (WHERE l.room_key = 'entrance') AS \"Entrance\",\n       max(l.temp_c - o.temp_c) FILTER (WHERE l.room_key = 'storage') AS \"Storage\"\nFROM latest l CROSS JOIN outdoor o" }
+          ]
+        },
+        {
+          "id": 43,
+          "type": "canvas",
+          "title": "Floor plan — sensor health (time since last report)",
+          "description": "Age of the reading the other three floor-plan panels are showing — same room/priority selection, so this cannot go green on a live backup sensor while the temperature panel displays a dead one's stale value. Ignores the dashboard time range on purpose: liveness is always relative to now. Catches a dead sensor AND a dying battery, which the WN31's binary batt flag only reveals once it is nearly too late. The WN31 broadcasts every ~60 s. Green < 5 min, red ≥ 1 h. Per-channel battery flags stay on the per-room rows and the provisioned battery alerts. Grey = no sensor.",
+          "gridPos": {"h": 14, "w": 6, "x": 18, "y": 70},
+          "datasource": {"type": "postgres", "uid": "timescaledb"},
+          "fieldConfig": { "defaults": {"unit": "s", "decimals": 0, "noValue": "—", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 300}, {"color": "orange", "value": 900}, {"color": "red", "value": 3600}]}}, "overrides": [] },
+          "options": {
+            "inlineEditing": true, "showAdvancedTypes": true, "panZoom": false, "infinitePan": false,
+            "root": {
+              "type": "frame", "name": "Element 1",
+              "constraint": {"horizontal": "left", "vertical": "top"},
+              "placement": {"left": 0, "top": 0, "width": 100, "height": 100, "rotation": 0},
+              "background": {"color": {"fixed": "transparent"}},
+              "border": {"color": {"fixed": "transparent"}},
+              "elements": [
+                {"type": "rectangle", "name": "living-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Room 1"}}, "background": {"color": {"field": "Room 1", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 0.0, "top": 0.0, "width": 49.94, "height": 62.76, "rotation": 0}},
+                {"type": "metric-value", "name": "living-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Room 1"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 0.0, "top": 0.0, "width": 49.94, "height": 62.76, "rotation": 0}},
+                {"type": "rectangle", "name": "bedroom-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Main bedroom"}}, "background": {"color": {"field": "Main bedroom", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 0.0, "width": 48.53, "height": 35.78, "rotation": 0}},
+                {"type": "metric-value", "name": "bedroom-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Main bedroom"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 0.0, "width": 48.53, "height": 35.78, "rotation": 0}},
+                {"type": "rectangle", "name": "bathroom-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Bathroom"}}, "background": {"color": {"field": "Bathroom", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 44.4, "width": 48.53, "height": 14.22, "rotation": 0}},
+                {"type": "metric-value", "name": "bathroom-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Bathroom"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.06, "top": 44.4, "width": 48.53, "height": 14.22, "rotation": 0}},
+                {"type": "rectangle", "name": "kitchen-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Kitchen"}}, "background": {"color": {"field": "Kitchen", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 8.07, "top": 62.84, "width": 42.0, "height": 14.74, "rotation": 0}},
+                {"type": "metric-value", "name": "kitchen-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Kitchen"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 8.07, "top": 62.84, "width": 42.0, "height": 14.74, "rotation": 0}},
+                {"type": "rectangle", "name": "desk-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Desk room"}}, "background": {"color": {"field": "Desk room", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.19, "top": 66.47, "width": 49.81, "height": 31.29, "rotation": 0}},
+                {"type": "metric-value", "name": "desk-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Desk room"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 50.19, "top": 66.47, "width": 49.81, "height": 31.29, "rotation": 0}},
+                {"type": "rectangle", "name": "entrance-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Entrance"}}, "background": {"color": {"field": "Entrance", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 30.86, "top": 77.67, "width": 17.03, "height": 21.9, "rotation": 0}},
+                {"type": "metric-value", "name": "entrance-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Entrance"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 30.86, "top": 77.67, "width": 17.03, "height": 21.9, "rotation": 0}},
+                {"type": "rectangle", "name": "storage-fill", "config": {"align": "center", "valign": "top", "color": {"fixed": "#101215"}, "size": 11, "text": {"mode": "fixed", "fixed": "Storage"}}, "background": {"color": {"field": "Storage", "fixed": "#2b2f38"}}, "border": {"color": {"fixed": "#8f959f"}, "width": 1}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 1.41, "top": 83.97, "width": 27.14, "height": 16.03, "rotation": 0}},
+                {"type": "metric-value", "name": "storage-value", "config": {"align": "center", "valign": "center", "color": {"fixed": "#101215"}, "size": 18, "text": {"mode": "field", "field": "Storage"}}, "background": {"color": {"fixed": "transparent"}}, "border": {"color": {"fixed": "transparent"}, "width": 0}, "constraint": {"horizontal": "scale", "vertical": "scale"}, "placement": {"left": 1.41, "top": 83.97, "width": 27.14, "height": 16.03, "rotation": 0}}
+              ]
+            }
+          },
+          "targets": [
+            { "refId": "A", "datasource": {"type": "postgres", "uid": "timescaledb"}, "rawQuery": true, "format": "table", "rawSql": "SELECT now() AS \"time\",\n       max(age_s) FILTER (WHERE room_key = 'living') AS \"Room 1\",\n       max(age_s) FILTER (WHERE room_key = 'bedroom') AS \"Main bedroom\",\n       max(age_s) FILTER (WHERE room_key = 'bathroom') AS \"Bathroom\",\n       max(age_s) FILTER (WHERE room_key = 'kitchen') AS \"Kitchen\",\n       max(age_s) FILTER (WHERE room_key = 'desk') AS \"Desk room\",\n       max(age_s) FILTER (WHERE room_key = 'entrance') AS \"Entrance\",\n       max(age_s) FILTER (WHERE room_key = 'storage') AS \"Storage\"\nFROM (SELECT DISTINCT ON (room_key) room_key,\n               EXTRACT(EPOCH FROM (now() - time))::double precision AS age_s\n        FROM room_readings\n        WHERE station_id IN ($station) AND temp_c IS NOT NULL\n        ORDER BY room_key, priority, time DESC) q" }
+          ]
+        }
+      ]
+    },
+    {
       "id": 24,
       "type": "row",
-      "title": "Room $wn31_ch (WN31)",
+      "title": "${wn31_ch:text} — WN31 ch $wn31_ch",
       "collapsed": false,
       "repeat": "wn31_ch",
       "repeatDirection": "h",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 69 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 70 },
       "panels": []
     },
     {
       "id": 25,
       "type": "stat",
-      "title": "Room $wn31_ch temp",
-      "description": "WN31 channel $wn31_ch air temperature.",
-      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 70 },
+      "title": "${wn31_ch:text} — temp",
+      "description": "WN31 channel $wn31_ch air temperature, with any per-unit calibration offset from sensor_locations applied.",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 71 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": { "defaults": { "unit": "celsius", "decimals": 1, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null }, { "color": "green", "value": 18 }, { "color": "orange", "value": 25 }, { "color": "red", "value": 30 } ] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto", "justifyMode": "auto" },
       "targets": [
-        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT $__timeGroup(time, $__interval) AS \"time\", avg(temp_c) AS \"Temp\" FROM sensor_channels WHERE sensor_type='wn31' AND channel = $wn31_ch AND station_id IN ($station) AND temp_c IS NOT NULL AND $__timeFilter(time) GROUP BY 1 ORDER BY 1" }
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT $__timeGroup(time, $__interval) AS \"time\", avg(temp_c) AS \"Temp\" FROM room_readings WHERE sensor_type='wn31' AND channel = $wn31_ch AND station_id IN ($station) AND temp_c IS NOT NULL AND $__timeFilter(time) GROUP BY 1 ORDER BY 1" }
       ]
     },
     {
       "id": 26,
       "type": "stat",
-      "title": "Room $wn31_ch RH",
+      "title": "${wn31_ch:text} — RH",
       "description": "WN31 channel $wn31_ch relative humidity.",
-      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 70 },
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 71 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": { "defaults": { "unit": "humidity", "decimals": 0, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "orange", "value": null }, { "color": "green", "value": 30 }, { "color": "blue", "value": 70 } ] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto", "justifyMode": "auto" },
       "targets": [
-        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT $__timeGroup(time, $__interval) AS \"time\", avg(humidity) AS \"RH\" FROM sensor_channels WHERE sensor_type='wn31' AND channel = $wn31_ch AND station_id IN ($station) AND humidity IS NOT NULL AND $__timeFilter(time) GROUP BY 1 ORDER BY 1" }
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT $__timeGroup(time, $__interval) AS \"time\", avg(humidity) AS \"RH\" FROM room_readings WHERE sensor_type='wn31' AND channel = $wn31_ch AND station_id IN ($station) AND humidity IS NOT NULL AND $__timeFilter(time) GROUP BY 1 ORDER BY 1" }
       ]
     },
     {
       "id": 27,
       "type": "stat",
-      "title": "Room $wn31_ch battery",
-      "description": "WN31 channel $wn31_ch battery flag (0=OK, 1=LOW).",
-      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 70 },
+      "title": "${wn31_ch:text} — battery",
+      "description": "WN31 channel $wn31_ch battery flag (0=OK, 1=LOW). Reads sensor_channels directly, not room_readings: battery is a property of the device, and it must stay visible even for a channel with no room assigned.",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 71 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": {
         "defaults": {
@@ -451,9 +613,9 @@
     {
       "id": 28,
       "type": "timeseries",
-      "title": "Room $wn31_ch — temp & humidity",
+      "title": "${wn31_ch:text} — temp & humidity",
       "description": "WN31 channel $wn31_ch history. Temp (left axis) / RH (right axis).",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 74 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 75 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": {
         "defaults": { "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10, "showPoints": "never" } },
@@ -464,7 +626,7 @@
       },
       "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
       "targets": [
-        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT $__timeGroup(time, $__interval) AS \"time\", avg(temp_c) AS \"Temp\", avg(humidity) AS \"RH\" FROM sensor_channels WHERE sensor_type='wn31' AND channel = $wn31_ch AND station_id IN ($station) AND $__timeFilter(time) GROUP BY 1 ORDER BY 1" }
+        { "refId": "A", "datasource": { "type": "postgres", "uid": "timescaledb" }, "rawQuery": true, "format": "time_series", "rawSql": "SELECT $__timeGroup(time, $__interval) AS \"time\", avg(temp_c) AS \"Temp\", avg(humidity) AS \"RH\" FROM room_readings WHERE sensor_type='wn31' AND channel = $wn31_ch AND station_id IN ($station) AND $__timeFilter(time) GROUP BY 1 ORDER BY 1" }
       ]
     },
     {
@@ -474,7 +636,7 @@
       "collapsed": false,
       "repeat": "wh51_ch",
       "repeatDirection": "h",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 82 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 83 },
       "panels": []
     },
     {
@@ -482,7 +644,7 @@
       "type": "stat",
       "title": "Soil $wh51_ch moisture",
       "description": "WH51 channel $wh51_ch calibrated soil moisture %.",
-      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 83 },
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 84 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": { "defaults": { "unit": "percent", "decimals": 0, "min": 0, "max": 100, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "orange", "value": 20 }, { "color": "green", "value": 35 }, { "color": "blue", "value": 75 } ] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto", "justifyMode": "auto" },
@@ -495,7 +657,7 @@
       "type": "stat",
       "title": "Soil $wh51_ch battery",
       "description": "WH51 channel $wh51_ch battery voltage. Replace below ~1.2 V.",
-      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 83 },
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 84 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": { "defaults": { "unit": "volt", "decimals": 2, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "orange", "value": 1.2 }, { "color": "green", "value": 1.35 } ] } }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "auto", "justifyMode": "auto" },
@@ -508,7 +670,7 @@
       "type": "timeseries",
       "title": "Soil $wh51_ch — calibrated % & raw AD",
       "description": "WH51 channel $wh51_ch. Kept dual-axis deliberately: this panel IS the calibration check — divergence between % and raw AD is the message.",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 87 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 88 },
       "datasource": { "type": "postgres", "uid": "timescaledb" },
       "fieldConfig": {
         "defaults": { "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 12, "showPoints": "never" } },
@@ -527,14 +689,14 @@
       "type": "row",
       "title": "Station health",
       "collapsed": true,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 95 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 96 },
       "panels": [
         {
           "id": 34,
           "type": "stat",
           "title": "WS69 array battery",
           "description": "Outdoor WS69 (WH65) array battery flag (0=OK, 1=LOW). Replace the 2×AA backup cells.",
-          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 96 },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 97 },
           "datasource": { "type": "postgres", "uid": "timescaledb" },
           "fieldConfig": {
             "defaults": {
@@ -558,7 +720,7 @@
           "type": "timeseries",
           "title": "Reports per 5 min",
           "description": "Ingest liveness: rows landed in weather_metrics per bucket. Flatlines to zero when the gateway, ingest service, or DB stops.",
-          "gridPos": { "h": 8, "w": 18, "x": 6, "y": 96 },
+          "gridPos": { "h": 8, "w": 18, "x": 6, "y": 97 },
           "datasource": { "type": "postgres", "uid": "timescaledb" },
           "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "custom": { "drawStyle": "bars", "fillOpacity": 60, "showPoints": "never" }, "color": { "mode": "fixed", "fixedColor": "green" } }, "overrides": [] },
           "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }, "tooltip": { "mode": "single", "sort": "none" } },
@@ -571,7 +733,7 @@
           "type": "timeseries",
           "title": "Soil battery (V) — all channels",
           "description": "WH51 battery voltage over time with 1.2 / 1.35 V threshold lines.",
-          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 104 },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 105 },
           "datasource": { "type": "postgres", "uid": "timescaledb" },
           "fieldConfig": { "defaults": { "unit": "volt", "decimals": 2, "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 8, "showPoints": "never", "thresholdsStyle": { "mode": "line" } }, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "orange", "value": 1.2 }, { "color": "green", "value": 1.35 } ] } }, "overrides": [] },
           "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "none" } },
